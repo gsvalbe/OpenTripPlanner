@@ -6,6 +6,7 @@ package org.opentripplanner.osm.tagmapping;
  */
 public enum OsmTagMapperSource {
   DEFAULT,
+  BALTICS,
   NORWAY,
   UK,
   FINLAND,
@@ -27,6 +28,7 @@ public enum OsmTagMapperSource {
       case ATLANTA -> new AtlantaMapper();
       case HOUSTON -> new HoustonMapper();
       case PORTLAND -> new PortlandMapper();
+      case BALTICS -> new BalticsMapper();
       case CONSTANT_SPEED_FINLAND -> new ConstantSpeedMapper();
     };
   }

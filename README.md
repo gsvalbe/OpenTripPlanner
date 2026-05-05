@@ -1,3 +1,7 @@
+## Pieturas OpenTripPlanner
+
+This is a fork of the OpenTripPlanner project to be used in [Pieturas](https://pieturas.lv) apps and services.
+
 ## Overview
 
 [![Join the chat at https://gitter.im/opentripplanner/OpenTripPLanner](https://badges.gitter.im/opentripplanner/OpenTripPlanner.svg)](https://gitter.im/opentripplanner/OpenTripPlanner)

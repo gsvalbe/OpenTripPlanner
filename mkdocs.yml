@@ -76,6 +76,7 @@ nav:
     - OSM Tag Mapping:
         - Default: 'osm/OsmTag.md'
         - Finland: 'osm/Finland.md'
+        - Baltics: 'osm/Baltics.md'
         - Germany: 'osm/Germany.md'
         - Norway: 'osm/Norway.md'
         - UK: 'osm/UK.md'
