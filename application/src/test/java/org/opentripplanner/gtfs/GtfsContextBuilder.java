@@ -145,24 +145,6 @@ public class GtfsContextBuilder {
     return deduplicator;
   }
 
-  private static class GtfsContextImpl implements GtfsContext {
-
-    private final String feedId;
-    private final CalendarServiceData calendarServiceData;
-
-    private GtfsContextImpl(String feedId, CalendarServiceData calendarServiceData) {
-      this.feedId = feedId;
-      this.calendarServiceData = calendarServiceData;
-    }
-
-    @Override
-    public String getFeedId() {
-      return feedId;
-    }
-
-    @Override
-    public CalendarServiceData getCalendarServiceData() {
-      return calendarServiceData;
-    }
-  }
+  private record GtfsContextImpl(String feedId, CalendarServiceData calendarServiceData) implements
+    GtfsContext {}
 }

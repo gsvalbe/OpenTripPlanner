@@ -8,6 +8,7 @@ import org.opentripplanner.transit.model.framework.AbstractEntityBuilder;
 import org.opentripplanner.transit.model.network.BikeAccess;
 import org.opentripplanner.transit.model.network.CarAccess;
 import org.opentripplanner.transit.model.network.Route;
+import org.opentripplanner.transit.model.network.TripPatternType;
 import org.opentripplanner.transit.model.organization.Operator;
 
 public class TripBuilder extends AbstractEntityBuilder<Trip, TripBuilder> {
@@ -27,6 +28,8 @@ public class TripBuilder extends AbstractEntityBuilder<Trip, TripBuilder> {
   private String gtfsBlockId;
   private String netexInternalPlanningCode;
   private TripAlteration netexAlteration;
+  private String tripPatternName;
+  private TripPatternType tripPatternType = TripPatternType.PRIMARY;
 
   TripBuilder(FeedScopedId id) {
     super(id);
@@ -49,6 +52,8 @@ public class TripBuilder extends AbstractEntityBuilder<Trip, TripBuilder> {
     this.carsAllowed = original.getCarsAllowed();
     this.wheelchairBoarding = original.getWheelchairBoarding();
     this.netexInternalPlanningCode = original.getNetexInternalPlanningCode();
+    this.tripPatternName = original.getTripPatternName();
+    this.tripPatternType = original.getTripPatternType();
   }
 
   public Operator getOperator() {
@@ -183,6 +188,24 @@ public class TripBuilder extends AbstractEntityBuilder<Trip, TripBuilder> {
 
   public TripBuilder withNetexAlteration(TripAlteration netexAlteration) {
     this.netexAlteration = netexAlteration;
+    return this;
+  }
+
+  public String getTripPatternName() {
+    return tripPatternName;
+  }
+
+  public TripBuilder withTripPatternName(String tripPatternName) {
+    this.tripPatternName = tripPatternName;
+    return this;
+  }
+
+  public TripPatternType getTripPatternType() {
+    return tripPatternType;
+  }
+
+  public TripBuilder withTripPatternType(TripPatternType tripPatternType) {
+    this.tripPatternType = tripPatternType;
     return this;
   }
 

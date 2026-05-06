@@ -5,13 +5,11 @@ import com.google.common.collect.Multimap;
 import jakarta.inject.Inject;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 import org.opentripplanner.graph_builder.model.GraphBuilderModule;
 import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.site.StopLocation;
-import org.opentripplanner.transit.model.timetable.TripTimes;
 import org.opentripplanner.transit.service.TimetableRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +90,6 @@ public class TripPatternNamer implements GraphBuilderModule {
       }
 
       /* Do the patterns within this Route have a unique start, end, or via Stop? */
-      Multimap<String, TripPattern> signs = ArrayListMultimap.create();
       Multimap<StopLocation, TripPattern> starts = ArrayListMultimap.create();
       Multimap<StopLocation, TripPattern> ends = ArrayListMultimap.create();
       Multimap<StopLocation, TripPattern> vias = ArrayListMultimap.create();
@@ -100,12 +97,6 @@ public class TripPatternNamer implements GraphBuilderModule {
       for (TripPattern pattern : routeTripPatterns) {
         StopLocation start = pattern.firstStop();
         StopLocation end = pattern.lastStop();
-        String headsign = pattern.getTripHeadsign() != null
-          ? pattern.getTripHeadsign().toString()
-          : null;
-        if (headsign != null) {
-          signs.put(headsign, pattern);
-        }
         starts.put(start, pattern);
         ends.put(end, pattern);
         for (StopLocation stop : pattern.getStops()) {
@@ -116,30 +107,19 @@ public class TripPatternNamer implements GraphBuilderModule {
         if (pattern.getName() != null) {
           continue;
         }
-        StringBuilder sb = new StringBuilder(routeName);
-        String headsign = pattern.getTripHeadsign() != null
-          ? pattern.getTripHeadsign().toString()
-          : null;
-        if (headsign != null && signs.get(headsign).size() == 1) {
-          pattern.initName(sb.append(" ").append(headsign).toString());
+
+        String patternName = pattern.getTripPatternName();
+        if (patternName != null && !patternName.isBlank()) {
+          pattern.initName(patternName);
           continue;
         }
 
-        /* First try to name with destination. */
-        var end = pattern.lastStop();
-        sb.append(" to ").append(stopNameAndId(end));
-        if (ends.get(end).size() == 1) {
-          pattern.initName(sb.toString());
-          // only pattern with this last stop
-          continue;
-        }
-
-        /* Then try to name with origin. */
+        /* First try to name with destination and origin. */
         var start = pattern.firstStop();
-        sb.append(" from ").append(stopNameAndId(start));
-        if (starts.get(start).size() == 1) {
-          pattern.initName((sb.toString()));
-          // only pattern with this first stop
+        var end = pattern.lastStop();
+        if (ends.get(end).size() == 1 || starts.get(start).size() == 1) {
+          pattern.initName(start.getName() + " - " + end.getName());
+          // only pattern with this last stop
           continue;
         }
 
@@ -149,7 +129,7 @@ public class TripPatternNamer implements GraphBuilderModule {
         // set intersection
         remainingPatterns.retainAll(ends.get(end));
         if (remainingPatterns.size() == 1) {
-          pattern.initName((sb.toString()));
+          pattern.initName(start.getName() + " - " + end.getName());
           continue;
         }
 
@@ -161,26 +141,15 @@ public class TripPatternNamer implements GraphBuilderModule {
           Set<TripPattern> intersection = new HashSet<>(remainingPatterns);
           intersection.retainAll(vias.get(via));
           if (intersection.size() == 1) {
-            sb.append(" via ").append(stopNameAndId(via));
-            pattern.initName((sb.toString()));
+            pattern.initName(start.getName() + " - " + via.getName() + " - " + end.getName());
             continue PATTERN;
           }
         }
 
-        /* Still not unique; check for express. */
-        if (remainingPatterns.size() == 2) {
-          // There are exactly two patterns sharing this start/end.
-          // The current one must be a subset of the other, because it has no unique via.
-          // Therefore we call it the express.
-          sb.append(" express");
-        } else {
-          // The final fallback: reference a specific trip ID.
-          Optional.ofNullable(pattern.getScheduledTimetable().getRepresentativeTripTimes())
-            .map(TripTimes::getTrip)
-            .ifPresent(value -> sb.append(" like trip ").append(value.getId()));
-        }
-        pattern.initName((sb.toString()));
+        pattern.initName(start.getName() + " - " + end.getName());
+        // END foreach PATTERN
       }
+      // END foreach ROUTE
     }
 
     if (LOG.isDebugEnabled()) {

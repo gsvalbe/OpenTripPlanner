@@ -180,6 +180,22 @@ public class PatternImpl implements GraphQLDataFetchers.GraphQLPattern {
   }
 
   @Override
+  public DataFetcher<String> tripPatternName() {
+    return environment -> getSource(environment).getTripPatternName();
+  }
+
+  @Override
+  public DataFetcher<GraphQLTypes.GraphQLTripPatternType> tripPatternType() {
+    return environment ->
+      switch (getSource(environment).getTripPatternType()) {
+        case SECONDARY -> GraphQLTypes.GraphQLTripPatternType.SECONDARY;
+        case TECHNICAL -> GraphQLTypes.GraphQLTripPatternType.TECHNICAL;
+        case NO_SERVICE -> GraphQLTypes.GraphQLTripPatternType.NO_SERVICE;
+        default -> GraphQLTypes.GraphQLTripPatternType.PRIMARY;
+      };
+  }
+
+  @Override
   public DataFetcher<Route> route() {
     return this::getRoute;
   }

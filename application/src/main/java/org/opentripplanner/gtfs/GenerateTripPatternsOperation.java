@@ -188,7 +188,10 @@ public class GenerateTripPatternsOperation {
       .withStopPattern(stopPattern)
       .withMode(trip.getMode())
       .withNetexSubmode(trip.getNetexSubMode())
-      .withHopGeometries(geometryProcessor.createHopGeometries(trip));
+      .withHopGeometries(geometryProcessor.createHopGeometries(trip))
+      .withTripPatternName(trip.getTripPatternName())
+      .withTripPatternType(trip.getTripPatternType());
+
     tripPatternBuilders.put(stopPattern, tripPatternBuilder);
     return tripPatternBuilder;
   }

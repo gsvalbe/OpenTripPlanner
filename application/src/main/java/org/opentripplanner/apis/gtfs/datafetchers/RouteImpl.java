@@ -248,6 +248,11 @@ public class RouteImpl implements GraphQLDataFetchers.GraphQLRoute {
     return environment -> getSource(environment).getUrl();
   }
 
+  @Override
+  public DataFetcher<String> regionName() {
+    return environment -> getSource(environment).getRegionName();
+  }
+
   private Iterable<Object> getStops(DataFetchingEnvironment environment) {
     return getTransitService(environment)
       .findPatterns(getSource(environment))

@@ -110,6 +110,11 @@ public final class TripPattern
   private final boolean stopPatternModifiedInRealTime;
   private final RoutingTripPattern routingTripPattern;
 
+  @Nullable
+  private final String tripPatternName;
+
+  private final TripPatternType tripPatternType;
+
   TripPattern(TripPatternBuilder builder) {
     super(builder.getId());
     this.name = builder.getName();
@@ -120,6 +125,7 @@ public final class TripPattern
     this.mode = requireNonNull(builder.getMode());
     this.netexSubMode = requireNonNull(builder.getNetexSubmode());
     this.containsMultipleModes = builder.getContainsMultipleModes();
+    this.tripPatternType = builder.getTripPatternType();
 
     if (builder.getScheduledTimetable() != null) {
       if (builder.getScheduledTimetableBuilder() != null) {
@@ -145,6 +151,8 @@ public final class TripPattern
     if (stopPatternModifiedInRealTime && !realTimeTripPattern) {
       throw new IllegalStateException();
     }
+
+    this.tripPatternName = builder.getTripPatternName();
   }
 
   public static TripPatternBuilder of(FeedScopedId id) {
@@ -206,6 +214,15 @@ public final class TripPattern
 
   public StopPattern getStopPattern() {
     return stopPattern;
+  }
+
+  @Nullable
+  public String getTripPatternName() {
+    return this.tripPatternName;
+  }
+
+  public TripPatternType getTripPatternType() {
+    return this.tripPatternType;
   }
 
   /**

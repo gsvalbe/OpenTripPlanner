@@ -1064,6 +1064,10 @@ type Pattern implements Node {
   semanticHash: String
   "List of stops served by this pattern"
   stops: [Stop!]
+  "Human-readable name for this stopping pattern, sourced from the trip_pattern_name column in trips.txt. Null if the feed does not provide this column."
+  tripPatternName: String
+  "How typical this stopping pattern is for the route and direction, sourced from the trip_pattern_type column in trips.txt."
+  tripPatternType: TripPatternType!
   "Trips which run on this pattern"
   trips: [Trip!]
   "Trips which run on this pattern on the specified date"
@@ -1869,6 +1873,8 @@ type QueryType {
     ids: [String] @deprecated(reason : "Since it is hard to reason about the ID filter being combined with others in this resolver, it will be moved to a separate one."),
     "Query routes by this name"
     name: String,
+    "Only return routes that belong to one of these region names (sourced from region_name in routes.txt)"
+    regionNames: [String!],
     """
     Only include routes whose pattern operates on at least one service date specified by this filter.
         
@@ -2167,6 +2173,8 @@ type Route implements Node {
     """
     serviceDates: LocalDateRangeInput
   ): [Pattern]
+  "Geographic region name sourced from the region_name column in routes.txt. Null if the feed does not provide this column."
+  regionName: String
   """
   Do any trips of this route have any linked replacements.
   Only ever true with NeTEx or SIRI, because GTFS does not implement replacement
@@ -2265,6 +2273,8 @@ type Stop implements Node & PlaceInterface {
     """
     types: [StopAlertType]
   ): [Alert]
+  "Attributes of the stop"
+  attributes: [StopAttribute!]!
   "The cluster which this stop is part of"
   cluster: Cluster @deprecated(reason : "Not implemented")
   "Stop code which is visible at the stop"
@@ -3949,6 +3959,37 @@ enum StopAlertType {
   TRIPS
 }
 
+"Stop attributes"
+enum StopAttribute {
+  ACCESSIBLE
+  AIR_CONDITIONED
+  BICYCLE_PARKING
+  BIKE_AND_RIDE
+  BIKE_RENTAL
+  CAFE
+  CAR_PARKING
+  CAR_RENTAL
+  CAR_SHARING
+  CHARGING_OUTLETS
+  COFFEE_MACHINE
+  ELECTRIC_BIKE_CHARGING
+  ELECTRIC_CAR_CHARGING
+  LOST_AND_FOUND
+  NOT_ACCESSIBLE
+  NO_SERVICE
+  NO_TICKET_SELLING
+  PARK_AND_RIDE
+  PRM_ASSISTANCE
+  SCOOTER_RENTAL
+  SHOPPING
+  STORAGE_LOCKERS
+  TICKET_OFFICE
+  TICKET_VENDING_MACHINE
+  WAITING_ROOM
+  WC
+  WIFI
+}
+
 enum StopType {
   "An area or zone represented by a polygon. Introduced by the GTFS-Flex spec process."
   LOCATION
@@ -4005,6 +4046,18 @@ enum TripAlertType {
   STOPS_ON_TRIP
   "Alerts affecting the trip"
   TRIP
+}
+
+"How typical a stopping pattern is for its route and direction, sourced from trip_pattern_type in trips.txt."
+enum TripPatternType {
+  "No-service pattern — reference pattern not scheduled for passenger service (trip_pattern_type 3)."
+  NO_SERVICE
+  "Primary pattern — the most common, representative stopping pattern (trip_pattern_type 0 or absent)."
+  PRIMARY
+  "Secondary pattern — an occasional alternative to the primary pattern (trip_pattern_type 1)."
+  SECONDARY
+  "Technical pattern — used for operational purposes, e.g. deadheads or short turns (trip_pattern_type 2)."
+  TECHNICAL
 }
 
 """

@@ -33,6 +33,13 @@ public final class TripPatternBuilder
   private TimetableBuilder scheduledTimetableBuilder;
 
   @Nullable
+  private String tripPatternName;
+
+  private TripPatternType tripPatternType = TripPatternType.PRIMARY;
+
+  private boolean createdByRealtimeUpdate;
+
+  @Nullable
   private TripPattern originalTripPattern;
 
   private List<LineString> hopGeometries;
@@ -59,6 +66,8 @@ public final class TripPatternBuilder
       : IntStream.range(0, original.numberOfStops() - 1)
           .mapToObj(original::getHopGeometry)
           .toList();
+    this.tripPatternName = original.getTripPatternName();
+    this.tripPatternType = original.getTripPatternType();
   }
 
   public TripPatternBuilder withName(String name) {
@@ -279,5 +288,24 @@ public final class TripPatternBuilder
       }
     }
     return hopGeometries;
+  }
+
+  @Nullable
+  public String getTripPatternName() {
+    return tripPatternName;
+  }
+
+  public TripPatternBuilder withTripPatternName(@Nullable String tripPatternName) {
+    this.tripPatternName = tripPatternName;
+    return this;
+  }
+
+  public TripPatternType getTripPatternType() {
+    return tripPatternType;
+  }
+
+  public TripPatternBuilder withTripPatternType(TripPatternType tripPatternType) {
+    this.tripPatternType = tripPatternType;
+    return this;
   }
 }

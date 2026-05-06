@@ -7,6 +7,7 @@ import java.util.Map;
 import org.opentripplanner.core.model.i18n.I18NString;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
+import org.opentripplanner.gtfs.extensions.RouteRegionExtension;
 import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.network.GroupOfRoutes;
 import org.opentripplanner.transit.model.network.Route;
@@ -93,6 +94,13 @@ class RouteMapper {
       var gor = GroupOfRoutes.of(networkId).build();
       lhs.getGroupsOfRoutes().add(gor);
     });
+
+    var regionExt = rhs.getExtension(RouteRegionExtension.class);
+    if (
+      regionExt != null && regionExt.getRegionName() != null && !regionExt.getRegionName().isBlank()
+    ) {
+      lhs.withRegionName(regionExt.getRegionName());
+    }
 
     return lhs.build();
   }

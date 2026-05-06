@@ -53,6 +53,7 @@ config:
     RentalVehicle: org.opentripplanner.service.vehiclerental.model.VehicleRentalVehicle#VehicleRentalVehicle
     VehicleRentalUris: org.opentripplanner.service.vehiclerental.model.VehicleRentalStationUris#VehicleRentalStationUris
     BikesAllowed: org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLBikesAllowed#GraphQLBikesAllowed
+    TripPatternType: org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLTripPatternType#GraphQLTripPatternType
     BookingInfo: org.opentripplanner.transit.model.timetable.booking.BookingInfo#BookingInfo
     BookingTime: org.opentripplanner.transit.model.timetable.booking.BookingTime#BookingTime
     CarPark: org.opentripplanner.service.vehicleparking.model.VehicleParking#VehicleParking
@@ -133,6 +134,7 @@ config:
     FareProduct: org.opentripplanner.model.fare.FareOffer#FareOffer
     FareMedium: org.opentripplanner.model.fare.FareMedium#FareMedium
     RiderCategory: org.opentripplanner.model.fare.RiderCategory#RiderCategory
+    StopAttribute: org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLStopAttribute#GraphQLStopAttribute
     StopPosition: org.opentripplanner.apis.gtfs.model.StopPosition#StopPosition
     RealTimeEstimate: org.opentripplanner.model.plan.leg.LegRealTimeEstimate#LegRealTimeEstimate
     EstimatedTime: org.opentripplanner.transit.model.timetable.EstimatedTime#EstimatedTime

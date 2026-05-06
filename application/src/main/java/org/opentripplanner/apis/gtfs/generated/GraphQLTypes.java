@@ -468,12 +468,6 @@ public class GraphQLTypes {
     NO_INFORMATION,
   }
 
-  public enum GraphQLCarsAllowed {
-    ALLOWED,
-    NOT_ALLOWED,
-    NO_INFORMATION,
-  }
-
   public static class GraphQLBoardPreferencesInput {
 
     private java.time.Duration slack;
@@ -726,6 +720,12 @@ public class GraphQLTypes {
     public void setGraphQLRentalDuration(java.time.Duration rentalDuration) {
       this.rentalDuration = rentalDuration;
     }
+  }
+
+  public enum GraphQLCarsAllowed {
+    ALLOWED,
+    NOT_ALLOWED,
+    NO_INFORMATION,
   }
 
   public static class GraphQLCyclingOptimizationInput {
@@ -4096,6 +4096,7 @@ public class GraphQLTypes {
     private List<String> feeds;
     private List<String> ids;
     private String name;
+    private List<String> regionNames;
     private GraphQLLocalDateRangeInput serviceDates;
     private List<GraphQLMode> transportModes;
 
@@ -4104,6 +4105,7 @@ public class GraphQLTypes {
         this.feeds = (List<String>) args.get("feeds");
         this.ids = (List<String>) args.get("ids");
         this.name = (String) args.get("name");
+        this.regionNames = (List<String>) args.get("regionNames");
         this.serviceDates = new GraphQLLocalDateRangeInput(
           (Map<String, Object>) args.get("serviceDates")
         );
@@ -4128,6 +4130,10 @@ public class GraphQLTypes {
       return this.name;
     }
 
+    public List<String> getGraphQLRegionNames() {
+      return this.regionNames;
+    }
+
     public GraphQLLocalDateRangeInput getGraphQLServiceDates() {
       return this.serviceDates;
     }
@@ -4146,6 +4152,10 @@ public class GraphQLTypes {
 
     public void setGraphQLName(String name) {
       this.name = name;
+    }
+
+    public void setGraphQLRegionNames(List<String> regionNames) {
+      this.regionNames = regionNames;
     }
 
     public void setGraphQLServiceDates(GraphQLLocalDateRangeInput serviceDates) {
@@ -5189,6 +5199,37 @@ public class GraphQLTypes {
     TRIPS,
   }
 
+  /** Stop attributes */
+  public enum GraphQLStopAttribute {
+    ACCESSIBLE,
+    AIR_CONDITIONED,
+    BICYCLE_PARKING,
+    BIKE_AND_RIDE,
+    BIKE_RENTAL,
+    CAFE,
+    CAR_PARKING,
+    CAR_RENTAL,
+    CAR_SHARING,
+    CHARGING_OUTLETS,
+    COFFEE_MACHINE,
+    ELECTRIC_BIKE_CHARGING,
+    ELECTRIC_CAR_CHARGING,
+    LOST_AND_FOUND,
+    NOT_ACCESSIBLE,
+    NO_SERVICE,
+    NO_TICKET_SELLING,
+    PARK_AND_RIDE,
+    PRM_ASSISTANCE,
+    SCOOTER_RENTAL,
+    SHOPPING,
+    STORAGE_LOCKERS,
+    TICKET_OFFICE,
+    TICKET_VENDING_MACHINE,
+    WAITING_ROOM,
+    WC,
+    WIFI,
+  }
+
   public enum GraphQLStopType {
     LOCATION,
     LOCATION_GROUP,
@@ -5704,6 +5745,14 @@ public class GraphQLTypes {
     ROUTE_TYPE,
     STOPS_ON_TRIP,
     TRIP,
+  }
+
+  /** How typical a stopping pattern is for its route and direction, sourced from trip_pattern_type in trips.txt. */
+  public enum GraphQLTripPatternType {
+    NO_SERVICE,
+    PRIMARY,
+    SECONDARY,
+    TECHNICAL,
   }
 
   public static class GraphQLVehicleParkingNameArgs {

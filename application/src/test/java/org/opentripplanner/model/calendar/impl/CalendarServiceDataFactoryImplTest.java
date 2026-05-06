@@ -50,7 +50,7 @@ public class CalendarServiceDataFactoryImplTest {
   @BeforeAll
   public static void setup() throws IOException {
     // The context builder uses the CalendarServiceDataFactoryImpl to create data
-    data = createCtxBuilder().getCalendarServiceData();
+    data = createCtxBuilder().calendarServiceData();
     calendarService = new CalendarServiceImpl(data);
   }
 

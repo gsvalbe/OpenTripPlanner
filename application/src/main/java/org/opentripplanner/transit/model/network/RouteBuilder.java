@@ -30,6 +30,7 @@ public final class RouteBuilder extends AbstractEntityBuilder<Route, RouteBuilde
   private String color;
   private String textColor;
   private BikeAccess bikesAllowed = BikeAccess.UNKNOWN;
+  private String regionName;
 
   RouteBuilder(FeedScopedId id) {
     super(id);
@@ -53,6 +54,7 @@ public final class RouteBuilder extends AbstractEntityBuilder<Route, RouteBuilde
     this.color = original.getColor();
     this.textColor = original.getTextColor();
     this.bikesAllowed = original.getBikesAllowed();
+    this.regionName = original.getRegionName();
   }
 
   public Agency getAgency() {
@@ -195,6 +197,15 @@ public final class RouteBuilder extends AbstractEntityBuilder<Route, RouteBuilde
 
   public RouteBuilder withNetexSubmode(String netexSubmode) {
     this.netexSubmode = netexSubmode;
+    return this;
+  }
+
+  public String getRegionName() {
+    return regionName;
+  }
+
+  public RouteBuilder withRegionName(String regionName) {
+    this.regionName = regionName;
     return this;
   }
 

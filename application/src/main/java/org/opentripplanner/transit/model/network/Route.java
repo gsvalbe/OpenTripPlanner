@@ -39,6 +39,9 @@ public final class Route extends AbstractTransitEntity<Route, RouteBuilder> impl
   private final String textColor;
   private final BikeAccess bikesAllowed;
 
+  @Nullable
+  private final String regionName;
+
   Route(RouteBuilder builder) {
     super(builder.getId());
     // Required fields
@@ -62,6 +65,7 @@ public final class Route extends AbstractTransitEntity<Route, RouteBuilder> impl
     this.url = builder.getUrl();
     this.color = builder.getColor();
     this.textColor = builder.getTextColor();
+    this.regionName = builder.getRegionName();
   }
 
   public static RouteBuilder of(FeedScopedId id) {
@@ -87,7 +91,8 @@ public final class Route extends AbstractTransitEntity<Route, RouteBuilder> impl
       Objects.equals(this.url, other.url) &&
       Objects.equals(this.color, other.color) &&
       Objects.equals(this.textColor, other.textColor) &&
-      Objects.equals(this.bikesAllowed, other.bikesAllowed)
+      Objects.equals(this.bikesAllowed, other.bikesAllowed) &&
+      Objects.equals(this.regionName, other.regionName)
     );
   }
 
@@ -184,6 +189,12 @@ public final class Route extends AbstractTransitEntity<Route, RouteBuilder> impl
 
   public BikeAccess getBikesAllowed() {
     return bikesAllowed;
+  }
+
+  /** Geographic region name sourced from the {@code region_name} column in {@code routes.txt}. */
+  @Nullable
+  public String getRegionName() {
+    return regionName;
   }
 
   /**

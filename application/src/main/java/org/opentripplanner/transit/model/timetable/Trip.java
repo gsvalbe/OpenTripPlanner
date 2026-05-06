@@ -17,6 +17,7 @@ import org.opentripplanner.transit.model.framework.LogInfo;
 import org.opentripplanner.transit.model.network.BikeAccess;
 import org.opentripplanner.transit.model.network.CarAccess;
 import org.opentripplanner.transit.model.network.Route;
+import org.opentripplanner.transit.model.network.TripPatternType;
 import org.opentripplanner.transit.model.organization.Operator;
 import org.opentripplanner.utils.lang.StringUtils;
 
@@ -66,6 +67,11 @@ public final class Trip extends AbstractTransitEntity<Trip, TripBuilder> impleme
   @Nullable
   private final String netexInternalPlanningCode;
 
+  @Nullable
+  private final String tripPatternName;
+
+  private final TripPatternType tripPatternType;
+
   Trip(TripBuilder builder) {
     super(builder.getId());
     // Required fields
@@ -93,6 +99,9 @@ public final class Trip extends AbstractTransitEntity<Trip, TripBuilder> impleme
     this.shapeId = builder.getShapeId();
     this.gtfsBlockId = builder.getGtfsBlockId();
     this.netexInternalPlanningCode = builder.getNetexInternalPlanningCode();
+
+    this.tripPatternName = builder.getTripPatternName();
+    this.tripPatternType = builder.getTripPatternType();
   }
 
   public static TripBuilder of(FeedScopedId id) {
@@ -190,6 +199,15 @@ public final class Trip extends AbstractTransitEntity<Trip, TripBuilder> impleme
    */
   public TripAlteration getNetexAlteration() {
     return netexAlteration;
+  }
+
+  @Nullable
+  public String getTripPatternName() {
+    return this.tripPatternName;
+  }
+
+  public TripPatternType getTripPatternType() {
+    return this.tripPatternType;
   }
 
   /**

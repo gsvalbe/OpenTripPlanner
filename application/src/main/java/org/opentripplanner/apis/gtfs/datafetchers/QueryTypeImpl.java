@@ -503,7 +503,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   @Override
   public DataFetcher<DataFetcherResult<RoutingResponse>> plan() {
     return environment -> {
-      GraphQLRequestContext context = environment.<GraphQLRequestContext>getContext();
+      GraphQLRequestContext context = environment.getContext();
       RouteRequest request = LegacyRouteRequestMapper.toRouteRequest(environment, context);
       return getPlanResult(context, request);
     };
@@ -512,7 +512,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   @Override
   public DataFetcher<DataFetcherResult<RoutingResponse>> planConnection() {
     return environment -> {
-      GraphQLRequestContext context = environment.<GraphQLRequestContext>getContext();
+      GraphQLRequestContext context = environment.getContext();
       RouteRequest request = RouteRequestMapper.toRouteRequest(environment, context);
       return getPlanResult(context, request);
     };
@@ -630,6 +630,13 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
           route ->
             GraphQLUtils.startsWith(route.getShortName(), name, environment.getLocale()) ||
             GraphQLUtils.startsWith(route.getLongName(), name, environment.getLocale())
+        );
+      }
+
+      if (args.getGraphQLRegionNames() != null) {
+        List<String> regionNames = args.getGraphQLRegionNames();
+        routeStream = routeStream.filter(
+          route -> route.getRegionName() != null && regionNames.contains(route.getRegionName())
         );
       }
 

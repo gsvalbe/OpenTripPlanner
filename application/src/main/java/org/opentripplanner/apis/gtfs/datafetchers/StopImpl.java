@@ -127,6 +127,14 @@ public class StopImpl implements GraphQLDataFetchers.GraphQLStop {
   }
 
   @Override
+  public DataFetcher<Iterable<GraphQLTypes.GraphQLStopAttribute>> attributes() {
+    return environment -> {
+      //TODO: Implement this
+      return List.of();
+    };
+  }
+
+  @Override
   @Deprecated
   public DataFetcher<Object> cluster() {
     return environment -> null;

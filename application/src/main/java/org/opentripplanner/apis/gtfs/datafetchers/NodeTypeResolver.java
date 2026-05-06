@@ -35,8 +35,7 @@ public class NodeTypeResolver implements TypeResolver {
     if (o instanceof TransitAlert) {
       return schema.getObjectType("Alert");
     }
-    if (o instanceof VehicleParking) {
-      var vehicleParking = (VehicleParking) o;
+    if (o instanceof VehicleParking vehicleParking) {
       if (queryContainsFragment("BikePark", environment) && vehicleParking.hasBicyclePlaces()) {
         return schema.getObjectType("BikePark");
       }
