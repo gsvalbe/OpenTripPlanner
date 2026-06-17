@@ -5343,6 +5343,16 @@ public class GraphQLTypes {
     }
   }
 
+  /** The type/nature of a transfer constraint between trips. */
+  public enum GraphQLTransferType {
+    DEFAULT,
+    FORBIDDEN,
+    GUARANTEED,
+    MIN_TIME,
+    RECOMMENDED,
+    STAY_SEATED,
+  }
+
   public static class GraphQLTransitFilterInput {
 
     private List<GraphQLTransitFilterSelectInput> exclude;

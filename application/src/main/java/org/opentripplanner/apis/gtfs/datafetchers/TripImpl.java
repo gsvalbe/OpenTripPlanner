@@ -32,6 +32,7 @@ import org.opentripplanner.routing.alertpatch.EntitySelector;
 import org.opentripplanner.routing.alertpatch.TransitAlert;
 import org.opentripplanner.routing.services.TransitAlertService;
 import org.opentripplanner.service.realtimevehicles.RealtimeVehicleService;
+import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
 import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.organization.Agency;
@@ -387,6 +388,18 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
   @Override
   public DataFetcher<GraphQLTypes.GraphQLWheelchairBoarding> wheelchairAccessible() {
     return environment -> GraphQLUtils.toGraphQL(getSource(environment).getWheelchairBoarding());
+  }
+
+  @Override
+  public DataFetcher<Iterable<ConstrainedTransfer>> outgoingTransfers() {
+    return environment ->
+      getTransitService(environment).findTransfersByFromTrip(getSource(environment));
+  }
+
+  @Override
+  public DataFetcher<Iterable<ConstrainedTransfer>> incomingTransfers() {
+    return environment ->
+      getTransitService(environment).findTransfersByToTrip(getSource(environment));
   }
 
   @Override

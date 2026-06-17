@@ -21,4 +21,10 @@ public interface ConstrainedTransferService {
     int toStopPosition,
     StopLocation toStop
   );
+
+  /** All constrained transfers where the FROM endpoint is a specific trip. */
+  List<ConstrainedTransfer> findTransfersByFromTrip(Trip trip);
+
+  /** All constrained transfers where the TO endpoint is a specific trip. */
+  List<ConstrainedTransfer> findTransfersByToTrip(Trip trip);
 }

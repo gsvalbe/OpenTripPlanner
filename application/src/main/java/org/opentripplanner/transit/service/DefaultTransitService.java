@@ -31,6 +31,7 @@ import org.opentripplanner.model.calendar.CalendarService;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.RaptorTransitData;
 import org.opentripplanner.routing.services.TransitAlertService;
 import org.opentripplanner.transfer.constrained.ConstrainedTransferService;
+import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
 import org.opentripplanner.transit.api.request.FindRegularStopsByBoundingBoxRequest;
 import org.opentripplanner.transit.api.request.FindRoutesRequest;
 import org.opentripplanner.transit.api.request.FindStopLocationsRequest;
@@ -736,6 +737,16 @@ public class DefaultTransitService implements TransitEditorService {
   @Override
   public ConstrainedTransferService getConstrainedTransferService() {
     return timetableRepository.getConstrainedTransferService();
+  }
+
+  @Override
+  public List<ConstrainedTransfer> findTransfersByFromTrip(Trip trip) {
+    return timetableRepository.getConstrainedTransferService().findTransfersByFromTrip(trip);
+  }
+
+  @Override
+  public List<ConstrainedTransfer> findTransfersByToTrip(Trip trip) {
+    return timetableRepository.getConstrainedTransferService().findTransfersByToTrip(trip);
   }
 
   @Override

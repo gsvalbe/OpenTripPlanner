@@ -4,13 +4,17 @@ import static org.opentripplanner.apis.gtfs.GraphQLUtils.stopTimeToInt;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import org.opentripplanner.apis.gtfs.GraphQLRequestContext;
 import org.opentripplanner.apis.gtfs.generated.GraphQLDataFetchers;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes;
 import org.opentripplanner.apis.gtfs.mapping.PickDropMapper;
 import org.opentripplanner.apis.gtfs.mapping.RealtimeStateMapper;
 import org.opentripplanner.framework.graphql.GraphQLUtils;
 import org.opentripplanner.model.TripTimeOnDate;
+import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
+import org.opentripplanner.transfer.constrained.model.TripTransferPoint;
 import org.opentripplanner.transit.model.timetable.Trip;
+import org.opentripplanner.transit.service.TransitService;
 
 public class StoptimeImpl implements GraphQLDataFetchers.GraphQLStoptime {
 
@@ -101,6 +105,42 @@ public class StoptimeImpl implements GraphQLDataFetchers.GraphQLStoptime {
   @Override
   public DataFetcher<Trip> trip() {
     return environment -> getSource(environment).getTrip();
+  }
+
+  @Override
+  public DataFetcher<Iterable<ConstrainedTransfer>> outgoingTransfers() {
+    return environment -> {
+      var stoptime = getSource(environment);
+      return getTransitService(environment)
+        .findTransfersByFromTrip(stoptime.getTrip())
+        .stream()
+        .filter(
+          t ->
+            t.getFrom() instanceof TripTransferPoint tp &&
+            tp.getStopPositionInPattern() == stoptime.getStopPosition()
+        )
+        .toList();
+    };
+  }
+
+  @Override
+  public DataFetcher<Iterable<ConstrainedTransfer>> incomingTransfers() {
+    return environment -> {
+      var stoptime = getSource(environment);
+      return getTransitService(environment)
+        .findTransfersByToTrip(stoptime.getTrip())
+        .stream()
+        .filter(
+          t ->
+            t.getTo() instanceof TripTransferPoint tp &&
+            tp.getStopPositionInPattern() == stoptime.getStopPosition()
+        )
+        .toList();
+    };
+  }
+
+  private TransitService getTransitService(DataFetchingEnvironment environment) {
+    return environment.<GraphQLRequestContext>getContext().transitService();
   }
 
   private TripTimeOnDate getSource(DataFetchingEnvironment environment) {

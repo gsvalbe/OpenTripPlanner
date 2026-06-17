@@ -110,6 +110,9 @@ config:
     StoptimesInPattern: org.opentripplanner.model.StopTimesInPattern#StopTimesInPattern
     TicketType: org.opentripplanner.ext.fares.model.FareRuleSet#FareRuleSet
     TranslatedString: java.util.Map#Map.Entry<String, String>
+    TransferEndpoint: org.opentripplanner.apis.gtfs.model.TransferEndpoint#TransferEndpoint
+    TransferType: org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLTransferType#GraphQLTransferType
+    TripTransfer: org.opentripplanner.transfer.constrained.model.ConstrainedTransfer#ConstrainedTransfer
     Trip: org.opentripplanner.transit.model.timetable.Trip#Trip
     TripOccupancy: org.opentripplanner.apis.gtfs.model.TripOccupancy#TripOccupancy
     Unknown: org.opentripplanner.apis.gtfs.model.UnknownModel#UnknownModel

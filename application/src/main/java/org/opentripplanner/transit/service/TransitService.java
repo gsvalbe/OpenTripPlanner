@@ -21,6 +21,7 @@ import org.opentripplanner.model.calendar.CalendarService;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.RaptorTransitData;
 import org.opentripplanner.routing.services.TransitAlertService;
 import org.opentripplanner.transfer.constrained.ConstrainedTransferService;
+import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
 import org.opentripplanner.transit.api.request.FindRegularStopsByBoundingBoxRequest;
 import org.opentripplanner.transit.api.request.FindRoutesRequest;
 import org.opentripplanner.transit.api.request.FindStopLocationsRequest;
@@ -359,6 +360,12 @@ public interface TransitService {
   Instant getTransitServiceStarts();
 
   ConstrainedTransferService getConstrainedTransferService();
+
+  /** All constrained transfers where the FROM endpoint is a specific trip. */
+  List<ConstrainedTransfer> findTransfersByFromTrip(Trip trip);
+
+  /** All constrained transfers where the TO endpoint is a specific trip. */
+  List<ConstrainedTransfer> findTransfersByToTrip(Trip trip);
 
   boolean transitFeedCovers(Instant dateTime);
 

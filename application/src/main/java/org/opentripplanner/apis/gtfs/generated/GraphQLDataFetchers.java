@@ -24,6 +24,7 @@ import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLRealtimeState
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLRelativeDirection;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLRoutingErrorCode;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLStopAttribute;
+import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLTransferType;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLTransitMode;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLTripPatternType;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLVerticalDirection;
@@ -34,6 +35,7 @@ import org.opentripplanner.apis.gtfs.model.FeedPublisher;
 import org.opentripplanner.apis.gtfs.model.PlanPageInfo;
 import org.opentripplanner.apis.gtfs.model.RideHailingProvider;
 import org.opentripplanner.apis.gtfs.model.StopPosition;
+import org.opentripplanner.apis.gtfs.model.TransferEndpoint;
 import org.opentripplanner.apis.gtfs.model.TripOccupancy;
 import org.opentripplanner.ext.fares.model.FareRuleSet;
 import org.opentripplanner.ext.ridehailing.model.RideEstimate;
@@ -73,6 +75,7 @@ import org.opentripplanner.service.vehiclerental.model.VehicleRentalStationUris;
 import org.opentripplanner.service.vehiclerental.model.VehicleRentalSystem;
 import org.opentripplanner.service.vehiclerental.model.VehicleRentalVehicle;
 import org.opentripplanner.street.model.openinghours.OHCalendar;
+import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
 import org.opentripplanner.transit.model.basic.Money;
 import org.opentripplanner.transit.model.network.ReplacedByRelation;
 import org.opentripplanner.transit.model.network.ReplacementForRelation;
@@ -933,6 +936,8 @@ public class GraphQLDataFetchers {
     DataFetcher<Integer> departureDelay();
     DataFetcher<GraphQLPickupDropoffType> dropoffType();
     DataFetcher<String> headsign();
+    DataFetcher<Iterable<ConstrainedTransfer>> incomingTransfers();
+    DataFetcher<Iterable<ConstrainedTransfer>> outgoingTransfers();
     DataFetcher<GraphQLPickupDropoffType> pickupType();
     DataFetcher<Boolean> realtime();
     DataFetcher<Integer> realtimeArrival();
@@ -982,6 +987,17 @@ public class GraphQLDataFetchers {
     DataFetcher<java.time.OffsetDateTime> start();
   }
 
+  /**
+   * One endpoint (from or to) of a TripTransfer.
+   * A trip-specific endpoint has both trip and stopPosition set.
+   * A stop/route-level endpoint has only stop set.
+   */
+  public interface GraphQLTransferEndpoint {
+    DataFetcher<Object> stop();
+    DataFetcher<Integer> stopPosition();
+    DataFetcher<Trip> trip();
+  }
+
   /** Text with language */
   public interface GraphQLTranslatedString {
     DataFetcher<String> language();
@@ -1001,8 +1017,10 @@ public class GraphQLDataFetchers {
     DataFetcher<Iterable<Iterable<Double>>> geometry();
     DataFetcher<String> gtfsId();
     DataFetcher<graphql.relay.Relay.ResolvedGlobalId> id();
+    DataFetcher<Iterable<ConstrainedTransfer>> incomingTransfers();
     DataFetcher<Boolean> isReplacement();
     DataFetcher<TripOccupancy> occupancy();
+    DataFetcher<Iterable<ConstrainedTransfer>> outgoingTransfers();
     DataFetcher<TripPattern> pattern();
     DataFetcher<Boolean> replacementsExist();
     DataFetcher<Route> route();
@@ -1058,6 +1076,19 @@ public class GraphQLDataFetchers {
   public interface GraphQLTripOnServiceDateEdge {
     DataFetcher<String> cursor();
     DataFetcher<TripOnServiceDate> node();
+  }
+
+  /**
+   * A constrained transfer between two trips (or between a trip and a stop/route).
+   * Exposes GTFS transfers.txt constraints and OTP-computed block interlining.
+   */
+  public interface GraphQLTripTransfer {
+    DataFetcher<TransferEndpoint> from();
+    DataFetcher<String> id();
+    DataFetcher<Integer> maxWaitTime();
+    DataFetcher<Integer> minTransferTime();
+    DataFetcher<TransferEndpoint> to();
+    DataFetcher<GraphQLTransferType> transferType();
   }
 
   /** This is used for alert entities that we don't explicitly handle or they are missing. */

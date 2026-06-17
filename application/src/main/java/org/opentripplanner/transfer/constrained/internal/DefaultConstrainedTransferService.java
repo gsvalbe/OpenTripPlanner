@@ -5,12 +5,16 @@ import static java.util.Comparator.comparingInt;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
+import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.transfer.constrained.ConstrainedTransferService;
 import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
+import org.opentripplanner.transfer.constrained.model.TripTransferPoint;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.model.timetable.Trip;
 
@@ -32,6 +36,9 @@ public class DefaultConstrainedTransferService implements Serializable, Constrai
    * ConstrainedTransfer.
    */
   private final TransferPointMap<TransferPointMap<ConstrainedTransfer>> transfersMap;
+
+  private final Map<FeedScopedId, List<ConstrainedTransfer>> byFromTripId = new HashMap<>();
+  private final Map<FeedScopedId, List<ConstrainedTransfer>> byToTripId = new HashMap<>();
 
   public DefaultConstrainedTransferService() {
     this.transfersList = new ArrayList<>();
@@ -74,11 +81,28 @@ public class DefaultConstrainedTransferService implements Serializable, Constrai
       .orElse(null);
   }
 
+  @Override
+  public List<ConstrainedTransfer> findTransfersByFromTrip(Trip trip) {
+    return byFromTripId.getOrDefault(trip.getId(), List.of());
+  }
+
+  @Override
+  public List<ConstrainedTransfer> findTransfersByToTrip(Trip trip) {
+    return byToTripId.getOrDefault(trip.getId(), List.of());
+  }
+
   private void add(ConstrainedTransfer transfer) {
     var from = transfer.getFrom();
     var to = transfer.getTo();
 
     transfersMap.computeIfAbsent(from, TransferPointMap::new).put(to, transfer);
     transfersList.add(transfer);
+
+    if (from instanceof TripTransferPoint tp) {
+      byFromTripId.computeIfAbsent(tp.getTrip().getId(), k -> new ArrayList<>()).add(transfer);
+    }
+    if (to instanceof TripTransferPoint tp) {
+      byToTripId.computeIfAbsent(tp.getTrip().getId(), k -> new ArrayList<>()).add(transfer);
+    }
   }
 }

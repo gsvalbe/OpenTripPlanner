@@ -69,10 +69,12 @@ import org.opentripplanner.apis.gtfs.datafetchers.StoptimeImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.StoptimesInPatternImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.SystemNoticeImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.TicketTypeImpl;
+import org.opentripplanner.apis.gtfs.datafetchers.TransferEndpointImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.TranslatedStringImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.TripImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.TripOccupancyImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.TripOnServiceDateImpl;
+import org.opentripplanner.apis.gtfs.datafetchers.TripTransferImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.UnknownImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.VehicleParkingImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.VehiclePositionImpl;
@@ -179,8 +181,10 @@ public class SchemaFactory {
         .type(typeWiring.build(StoptimeImpl.class))
         .type(typeWiring.build(StoptimesInPatternImpl.class))
         .type(typeWiring.build(TicketTypeImpl.class))
+        .type(typeWiring.build(TransferEndpointImpl.class))
         .type(typeWiring.build(TranslatedStringImpl.class))
         .type(typeWiring.build(TripImpl.class))
+        .type(typeWiring.build(TripTransferImpl.class))
         .type(typeWiring.build(SystemNoticeImpl.class))
         .type(typeWiring.build(ContactInfoImpl.class))
         .type(typeWiring.build(BookingTimeImpl.class))
