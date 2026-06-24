@@ -114,6 +114,7 @@ config:
     TransferType: org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLTransferType#GraphQLTransferType
     TripTransfer: org.opentripplanner.transfer.constrained.model.ConstrainedTransfer#ConstrainedTransfer
     Trip: org.opentripplanner.transit.model.timetable.Trip#Trip
+    TripFare: org.opentripplanner.apis.gtfs.model.TripFare#TripFare
     TripOccupancy: org.opentripplanner.apis.gtfs.model.TripOccupancy#TripOccupancy
     Unknown: org.opentripplanner.apis.gtfs.model.UnknownModel#UnknownModel
     VehicleParking: org.opentripplanner.service.vehicleparking.model.VehicleParking#VehicleParking

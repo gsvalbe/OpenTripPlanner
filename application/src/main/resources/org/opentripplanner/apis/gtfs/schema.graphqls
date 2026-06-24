@@ -664,6 +664,16 @@ type FareProductUse {
   product: FareProduct
 }
 
+"The fare for travelling on a single trip between two of its stops."
+type TripFare {
+  "The stop where the passenger boards."
+  fromStop: Stop!
+  "The stop where the passenger alights."
+  toStop: Stop!
+  "The fare products purchasable for travelling this segment of the trip."
+  fareProducts: [FareProductUse!]!
+}
+
 "A feed provides routing data (stops, routes, timetables, etc.) from one or more public transport agencies."
 type Feed {
   "List of agencies which provide data to this feed"
@@ -2873,6 +2883,31 @@ type Trip implements Node {
   the pattern has trips only in one direction.
   """
   directionId: String
+  """
+  The fare for travelling on this trip between two of its stops, identified by their
+  zero-based positions in the trip's stop sequence (matching the order of `stoptimes`).
+  Returns `null` if the positions are invalid or the trip does not run on the given date.
+  """
+  fareBetween(
+    "Zero-based position of the boarding stop in the trip's stop sequence."
+    fromStopPosition: Int!
+    "Zero-based position of the alighting stop in the trip's stop sequence."
+    toStopPosition: Int!
+    "Service date in `YYYYMMDD` format. Defaults to the current date."
+    serviceDate: String
+  ): TripFare
+  """
+  The fares for travelling on this trip from a given boarding stop to every later stop
+  on the trip. For example, boarding at position 2 (stop C) of a trip serving stops
+  A,B,C,D,E,F returns the fares C→D, C→E and C→F. Returns an empty list if the position
+  is invalid or the trip does not run on the given date.
+  """
+  faresFrom(
+    "Zero-based position of the boarding stop in the trip's stop sequence."
+    fromStopPosition: Int!
+    "Service date in `YYYYMMDD` format. Defaults to the current date."
+    serviceDate: String
+  ): [TripFare!]!
   "List of coordinates of this trip's route"
   geometry: [[Float]]
   "ID of the trip in format `FeedId:TripId`"

@@ -36,6 +36,7 @@ import org.opentripplanner.apis.gtfs.model.PlanPageInfo;
 import org.opentripplanner.apis.gtfs.model.RideHailingProvider;
 import org.opentripplanner.apis.gtfs.model.StopPosition;
 import org.opentripplanner.apis.gtfs.model.TransferEndpoint;
+import org.opentripplanner.apis.gtfs.model.TripFare;
 import org.opentripplanner.apis.gtfs.model.TripOccupancy;
 import org.opentripplanner.ext.fares.model.FareRuleSet;
 import org.opentripplanner.ext.ridehailing.model.RideEstimate;
@@ -1014,6 +1015,8 @@ public class GraphQLDataFetchers {
     DataFetcher<GraphQLCarsAllowed> carsAllowed();
     DataFetcher<TripTimeOnDate> departureStoptime();
     DataFetcher<String> directionId();
+    DataFetcher<TripFare> fareBetween();
+    DataFetcher<Iterable<TripFare>> faresFrom();
     DataFetcher<Iterable<Iterable<Double>>> geometry();
     DataFetcher<String> gtfsId();
     DataFetcher<graphql.relay.Relay.ResolvedGlobalId> id();
@@ -1037,6 +1040,13 @@ public class GraphQLDataFetchers {
     DataFetcher<
       org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLWheelchairBoarding
     > wheelchairAccessible();
+  }
+
+  /** The fare for travelling on a single trip between two of its stops. */
+  public interface GraphQLTripFare {
+    DataFetcher<Iterable<FareOffer>> fareProducts();
+    DataFetcher<Object> fromStop();
+    DataFetcher<Object> toStop();
   }
 
   /**

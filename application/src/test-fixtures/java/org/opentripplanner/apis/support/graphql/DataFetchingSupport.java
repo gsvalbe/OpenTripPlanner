@@ -11,6 +11,7 @@ import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.DataFetchingEnvironmentImpl;
 import java.util.Map;
 import org.opentripplanner.apis.gtfs.GraphQLRequestContext;
+import org.opentripplanner.routing.fares.FareService;
 import org.opentripplanner.transit.service.DefaultTransitService;
 import org.opentripplanner.transit.service.TimetableRepository;
 import org.opentripplanner.transit.service.TransitService;
@@ -40,12 +41,32 @@ public class DataFetchingSupport {
     Map<String, Object> arguments,
     TransitService service
   ) {
+    return dataFetchingEnvironment(source, arguments, service, null);
+  }
+
+  public static DataFetchingEnvironment dataFetchingEnvironment(
+    Object source,
+    Map<String, Object> arguments,
+    TransitService service,
+    FareService fareService
+  ) {
     final var executionContext = executionContext();
     return DataFetchingEnvironmentImpl.newDataFetchingEnvironment(executionContext)
       .source(source)
       .arguments(arguments)
       .context(
-        new GraphQLRequestContext(null, service, null, null, null, null, null, null, null, null)
+        new GraphQLRequestContext(
+          null,
+          service,
+          null,
+          fareService,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        )
       )
       .build();
   }

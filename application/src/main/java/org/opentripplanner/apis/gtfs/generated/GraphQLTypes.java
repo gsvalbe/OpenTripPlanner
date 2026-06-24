@@ -5709,6 +5709,74 @@ public class GraphQLTypes {
     }
   }
 
+  public static class GraphQLTripFareBetweenArgs {
+
+    private Integer fromStopPosition;
+    private String serviceDate;
+    private Integer toStopPosition;
+
+    public GraphQLTripFareBetweenArgs(Map<String, Object> args) {
+      if (args != null) {
+        this.fromStopPosition = (Integer) args.get("fromStopPosition");
+        this.serviceDate = (String) args.get("serviceDate");
+        this.toStopPosition = (Integer) args.get("toStopPosition");
+      }
+    }
+
+    public Integer getGraphQLFromStopPosition() {
+      return this.fromStopPosition;
+    }
+
+    public String getGraphQLServiceDate() {
+      return this.serviceDate;
+    }
+
+    public Integer getGraphQLToStopPosition() {
+      return this.toStopPosition;
+    }
+
+    public void setGraphQLFromStopPosition(Integer fromStopPosition) {
+      this.fromStopPosition = fromStopPosition;
+    }
+
+    public void setGraphQLServiceDate(String serviceDate) {
+      this.serviceDate = serviceDate;
+    }
+
+    public void setGraphQLToStopPosition(Integer toStopPosition) {
+      this.toStopPosition = toStopPosition;
+    }
+  }
+
+  public static class GraphQLTripFaresFromArgs {
+
+    private Integer fromStopPosition;
+    private String serviceDate;
+
+    public GraphQLTripFaresFromArgs(Map<String, Object> args) {
+      if (args != null) {
+        this.fromStopPosition = (Integer) args.get("fromStopPosition");
+        this.serviceDate = (String) args.get("serviceDate");
+      }
+    }
+
+    public Integer getGraphQLFromStopPosition() {
+      return this.fromStopPosition;
+    }
+
+    public String getGraphQLServiceDate() {
+      return this.serviceDate;
+    }
+
+    public void setGraphQLFromStopPosition(Integer fromStopPosition) {
+      this.fromStopPosition = fromStopPosition;
+    }
+
+    public void setGraphQLServiceDate(String serviceDate) {
+      this.serviceDate = serviceDate;
+    }
+  }
+
   public static class GraphQLTripStoptimesForDateArgs {
 
     private String serviceDate;
