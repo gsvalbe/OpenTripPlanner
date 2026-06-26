@@ -689,6 +689,7 @@ public class GraphQLDataFetchers {
     DataFetcher<
       graphql.execution.DataFetcherResult<org.opentripplanner.routing.api.response.RoutingResponse>
     > planConnection();
+    DataFetcher<Iterable<String>> regions();
     DataFetcher<VehicleRentalVehicle> rentalVehicle();
     DataFetcher<Iterable<VehicleRentalVehicle>> rentalVehicles();
     DataFetcher<Route> route();

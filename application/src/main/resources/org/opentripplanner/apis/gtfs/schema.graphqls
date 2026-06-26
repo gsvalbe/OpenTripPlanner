@@ -1993,6 +1993,8 @@ type QueryType {
     "The list of points the itinerary is required to pass through."
     via: [PlanViaLocationInput!]
   ): PlanConnection @async @timingData
+  "Get all region names."
+  regions: [String!] @timingData
   "Get a single rental vehicle based on its ID, i.e. value of field `vehicleId`"
   rentalVehicle(id: String!): RentalVehicle @timingData
   "Get all rental vehicles"
@@ -2019,8 +2021,8 @@ type QueryType {
     ids: [String] @deprecated(reason : "Since it is hard to reason about the ID filter being combined with others in this resolver, it will be moved to a separate one."),
     "Query routes by this name"
     name: String,
-    "Only return routes that belong to one of these region names (sourced from region_name in routes.txt)"
-    regionNames: [String!],
+    "Only return routes that belong to one of these region names (sourced from region_name in routes.txt). Include `null` in the list to also match routes that have no region."
+    regionNames: [String],
     """
     
     Only include routes whose pattern operates on at least one service date specified by this filter.

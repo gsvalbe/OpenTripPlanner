@@ -519,6 +519,18 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   }
 
   @Override
+  public DataFetcher<Iterable<String>> regions() {
+    return environment ->
+      getTransitService(environment)
+        .listRoutes()
+        .stream()
+        .map(Route::getRegionName)
+        .filter(Objects::nonNull)
+        .distinct()
+        .toList();
+  }
+
+  @Override
   public DataFetcher<VehicleRentalVehicle> rentalVehicle() {
     return environment -> {
       var args = new GraphQLTypes.GraphQLQueryTypeRentalVehicleArgs(environment.getArguments());
@@ -635,9 +647,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
 
       if (args.getGraphQLRegionNames() != null) {
         List<String> regionNames = args.getGraphQLRegionNames();
-        routeStream = routeStream.filter(
-          route -> route.getRegionName() != null && regionNames.contains(route.getRegionName())
-        );
+        routeStream = routeStream.filter(route -> regionNames.contains(route.getRegionName()));
       }
 
       if (LocalDateRangeUtil.hasServiceDateFilter(args.getGraphQLServiceDates())) {

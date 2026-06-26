@@ -133,7 +133,12 @@ class TripImplFareTest {
   }
 
   private static List<Money> prices(TripFare fare) {
-    return fare.fareProducts().stream().map(FareOffer::fareProduct).map(FareProduct::price).toList();
+    return fare
+      .fareProducts()
+      .stream()
+      .map(FareOffer::fareProduct)
+      .map(FareProduct::price)
+      .toList();
   }
 
   private static String stopName(Object stop) {
