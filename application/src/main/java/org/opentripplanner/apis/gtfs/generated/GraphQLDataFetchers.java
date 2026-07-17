@@ -34,6 +34,7 @@ import org.opentripplanner.apis.gtfs.model.CallScheduledTime;
 import org.opentripplanner.apis.gtfs.model.FeedPublisher;
 import org.opentripplanner.apis.gtfs.model.PlanPageInfo;
 import org.opentripplanner.apis.gtfs.model.RideHailingProvider;
+import org.opentripplanner.apis.gtfs.model.SearchResultModel;
 import org.opentripplanner.apis.gtfs.model.StopPosition;
 import org.opentripplanner.apis.gtfs.model.TransferEndpoint;
 import org.opentripplanner.apis.gtfs.model.TripFare;
@@ -694,6 +695,7 @@ public class GraphQLDataFetchers {
     DataFetcher<Iterable<VehicleRentalVehicle>> rentalVehicles();
     DataFetcher<Route> route();
     DataFetcher<Iterable<Route>> routes();
+    DataFetcher<Iterable<SearchResultModel>> search();
     DataFetcher<Object> serviceTimeRange();
     DataFetcher<Object> station();
     DataFetcher<Iterable<Object>> stations();
@@ -845,6 +847,17 @@ public class GraphQLDataFetchers {
     DataFetcher<String> description();
     DataFetcher<GraphQLInputField> inputField();
   }
+
+  /** A single entity matched by a `search` query, together with why it was ranked where it was. */
+  public interface GraphQLSearchResult {
+    DataFetcher<Double> distance();
+    DataFetcher<Object> item();
+    DataFetcher<String> name();
+    DataFetcher<Double> score();
+  }
+
+  /** An entity matched by a `search` query. */
+  public interface GraphQLSearchResultItem extends TypeResolver {}
 
   /** A single use of a set of stairs. */
   public interface GraphQLStairsUse {

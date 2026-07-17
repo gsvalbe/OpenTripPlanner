@@ -4167,6 +4167,74 @@ public class GraphQLTypes {
     }
   }
 
+  public static class GraphQLQueryTypeSearchArgs {
+
+    private Integer first;
+    private Double focusLat;
+    private Double focusLon;
+    private String text;
+    private List<GraphQLSearchResultType> types;
+
+    public GraphQLQueryTypeSearchArgs(Map<String, Object> args) {
+      if (args != null) {
+        this.first = (Integer) args.get("first");
+        this.focusLat = (Double) args.get("focusLat");
+        this.focusLon = (Double) args.get("focusLon");
+        this.text = (String) args.get("text");
+        if (args.get("types") != null) {
+          this.types = ((List<Object>) args.get("types")).stream()
+            .map(item ->
+              item instanceof GraphQLSearchResultType
+                ? item
+                : GraphQLSearchResultType.valueOf((String) item)
+            )
+            .map(GraphQLSearchResultType.class::cast)
+            .collect(Collectors.toList());
+        }
+      }
+    }
+
+    public Integer getGraphQLFirst() {
+      return this.first;
+    }
+
+    public Double getGraphQLFocusLat() {
+      return this.focusLat;
+    }
+
+    public Double getGraphQLFocusLon() {
+      return this.focusLon;
+    }
+
+    public String getGraphQLText() {
+      return this.text;
+    }
+
+    public List<GraphQLSearchResultType> getGraphQLTypes() {
+      return this.types;
+    }
+
+    public void setGraphQLFirst(Integer first) {
+      this.first = first;
+    }
+
+    public void setGraphQLFocusLat(Double focusLat) {
+      this.focusLat = focusLat;
+    }
+
+    public void setGraphQLFocusLon(Double focusLon) {
+      this.focusLon = focusLon;
+    }
+
+    public void setGraphQLText(String text) {
+      this.text = text;
+    }
+
+    public void setGraphQLTypes(List<GraphQLSearchResultType> types) {
+      this.types = types;
+    }
+  }
+
   public static class GraphQLQueryTypeStationArgs {
 
     private String id;
@@ -4835,6 +4903,32 @@ public class GraphQLTypes {
     ) {
       this.destinationScooterPolicy = destinationScooterPolicy;
     }
+  }
+
+  public static class GraphQLSearchResultNameArgs {
+
+    private String language;
+
+    public GraphQLSearchResultNameArgs(Map<String, Object> args) {
+      if (args != null) {
+        this.language = (String) args.get("language");
+      }
+    }
+
+    public String getGraphQLLanguage() {
+      return this.language;
+    }
+
+    public void setGraphQLLanguage(String language) {
+      this.language = language;
+    }
+  }
+
+  /** The kinds of entity a `search` query can return. */
+  public enum GraphQLSearchResultType {
+    PATTERN,
+    ROUTE,
+    STOP,
   }
 
   public static class GraphQLStopAlertsArgs {

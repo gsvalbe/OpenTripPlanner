@@ -4,10 +4,14 @@ import static java.util.Map.entry;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -23,6 +27,7 @@ import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.document.LatLonDocValuesField;
 import org.apache.lucene.document.LatLonPoint;
 import org.apache.lucene.document.StoredField;
+import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
@@ -33,8 +38,12 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.BoostQuery;
+import org.apache.lucene.search.FieldDoc;
 import org.apache.lucene.search.FuzzyQuery;
+import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.PrefixQuery;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TermQuery;
@@ -44,10 +53,12 @@ import org.apache.lucene.search.suggest.document.CompletionAnalyzer;
 import org.apache.lucene.search.suggest.document.ContextSuggestField;
 import org.apache.lucene.search.suggest.document.SuggestIndexSearcher;
 import org.apache.lucene.store.ByteBuffersDirectory;
+import org.apache.lucene.util.BytesRef;
 import org.opentripplanner.core.model.i18n.I18NString;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationService;
 import org.opentripplanner.street.geometry.WgsCoordinate;
+import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.site.StopType;
 import org.opentripplanner.transit.service.DefaultTransitService;
 import org.opentripplanner.transit.service.TimetableRepository;
@@ -56,6 +67,7 @@ import org.opentripplanner.transit.service.TransitService;
 public class LuceneIndex implements Serializable {
 
   private static final int MAX_RESULTS = 25;
+  private static final int MAX_SEARCH_RESULTS = 100;
 
   private static final String TYPE = "type";
   private static final String ID = "id";
@@ -64,9 +76,36 @@ public class LuceneIndex implements Serializable {
   private static final String NAME = "name";
   private static final String NAME_NGRAM = "name_ngram";
   private static final String CODE = "code";
+  private static final String MODE = "mode";
   private static final String LAT = "latitude";
   private static final String LON = "longitude";
   private static final String LOCATION = "location";
+
+  /**
+   * Boosts applied to an exact match on the code field, which holds stop codes and route numbers.
+   * A route's number is the strongest signal there is: a query of "5" means route 5, not the stop
+   * "Depo iela 5". Patterns rank below routes because they carry their parent route's number and
+   * would otherwise crowd it out.
+   */
+  private static final float ROUTE_CODE_BOOST = 300.0f;
+  private static final float STOP_CODE_BOOST = 100.0f;
+  private static final float PATTERN_CODE_BOOST = 60.0f;
+
+  /**
+   * Applied to the unsplit query text when mode words were removed from it, so that a name which
+   * genuinely contains a mode word ("Tramvaju depo") still matches. It is deliberately weak: it is
+   * a fallback, not the primary interpretation.
+   */
+  private static final float ORIGINAL_TEXT_BOOST = 0.5f;
+
+  private static final float DISTANCE_BOOST = 10.0f;
+
+  /**
+   * The distance at which the proximity boost is halved. Tuned for city-scale search, where
+   * everything a user is likely to mean is within a few tens of kilometres; a larger pivot makes
+   * the boost too flat to reorder results within a city.
+   */
+  private static final double DISTANCE_PIVOT_METERS = 25_000.0;
 
   private final Analyzer analyzer;
   private final SuggestIndexSearcher searcher;
@@ -92,6 +131,7 @@ public class LuceneIndex implements Serializable {
     @Nullable StopConsolidationService stopConsolidationService
   ) {
     this.stopClusterMapper = new StopClusterMapper(transitService, stopConsolidationService);
+    var transitDocumentMapper = new TransitDocumentMapper(transitService);
 
     this.analyzer = new PerFieldAnalyzerWrapper(
       new StandardAnalyzer(),
@@ -119,9 +159,8 @@ public class LuceneIndex implements Serializable {
         stopClusterMapper
           .generateStopClusters(regularStops, transitService.listStopLocationGroups())
           .forEach(stopCluster ->
-            addToIndex(
+            addStopClusterToIndex(
               directoryWriter,
-              StopCluster.class,
               stopCluster.primaryId(),
               stopCluster.secondaryIds(),
               stopCluster.names(),
@@ -130,6 +169,13 @@ public class LuceneIndex implements Serializable {
               stopCluster.coordinate().lon()
             )
           );
+
+        transitDocumentMapper
+          .generateRouteDocuments()
+          .forEach(doc -> addTransitDocumentToIndex(directoryWriter, SearchType.ROUTE, doc));
+        transitDocumentMapper
+          .generatePatternDocuments()
+          .forEach(doc -> addTransitDocumentToIndex(directoryWriter, SearchType.PATTERN, doc));
       }
 
       DirectoryReader indexReader = DirectoryReader.open(directory);
@@ -150,6 +196,248 @@ public class LuceneIndex implements Serializable {
    */
   public Stream<StopCluster> queryStopClusters(String query, @Nullable WgsCoordinate focusPoint) {
     return findDocuments(query, focusPoint).map(this::toStopCluster);
+  }
+
+  /**
+   * Searches stops, routes and patterns in one ranked list.
+   * <p>
+   * Matching is case-insensitive and tolerates typos and partial words. Results are ranked by how
+   * well they match the text, boosted by how close they are to {@code focusPoint} — so a user
+   * typing "5" in Riga gets Riga's route 5 rather than one in another city.
+   * <p>
+   * Words naming a transit mode ("tram", "tramvajs") are understood as such: "tramvajs 5" finds tram
+   * route 5 and not bus 5. A query consisting only of mode words lists that mode's routes, nearest
+   * first.
+   * <p>
+   * The index is a snapshot taken at startup, so entities added by real-time updates are not
+   * searchable. Callers resolve the returned ids against the transit service, so the data they show
+   * is current even though the match was made against the snapshot.
+   *
+   * @param types the kinds of entity to return, or null/empty for all of them
+   * @param limit the maximum number of results, capped at {@value #MAX_SEARCH_RESULTS}
+   */
+  public List<SearchHit> search(
+    String query,
+    @Nullable WgsCoordinate focusPoint,
+    @Nullable Set<SearchType> types,
+    int limit
+  ) {
+    var searchTypes = (types == null || types.isEmpty())
+      ? EnumSet.allOf(SearchType.class)
+      : EnumSet.copyOf(types);
+    var parsed = ModeWordParser.parse(query);
+
+    var luceneQuery = buildSearchQuery(query, parsed, focusPoint, searchTypes);
+    if (luceneQuery.isEmpty()) {
+      return List.of();
+    }
+
+    var n = Math.clamp(limit, 1, MAX_SEARCH_RESULTS);
+    try {
+      TopDocs topDocs;
+      if (focusPoint == null) {
+        topDocs = searcher.search(luceneQuery.get(), n);
+      } else {
+        var sort = new Sort(
+          SortField.FIELD_SCORE,
+          LatLonDocValuesField.newDistanceSort(
+            LOCATION,
+            focusPoint.latitude(),
+            focusPoint.longitude()
+          )
+        );
+        // doDocScores, so that the score survives onto the hits and not just into the sort
+        topDocs = searcher.search(luceneQuery.get(), n, sort, true);
+      }
+
+      var hits = new ArrayList<SearchHit>(topDocs.scoreDocs.length);
+      for (var scoreDoc : topDocs.scoreDocs) {
+        var hit = toSearchHit(scoreDoc);
+        if (hit != null) {
+          hits.add(hit);
+        }
+      }
+      return hits;
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private Optional<Query> buildSearchQuery(
+    String originalQuery,
+    ModeWordParser.ParsedQuery parsed,
+    @Nullable WgsCoordinate focusPoint,
+    Set<SearchType> searchTypes
+  ) {
+    var matchBuilder = new BooleanQuery.Builder().setMinimumNumberShouldMatch(1);
+
+    if (parsed.hasText()) {
+      for (var type : searchTypes) {
+        matchBuilder.add(textSubQuery(type, parsed, originalQuery), Occur.SHOULD);
+      }
+    } else if (parsed.hasModes()) {
+      // "tramvajs" on its own is a request for that mode's routes, ranked by proximity
+      if (!searchTypes.contains(SearchType.ROUTE)) {
+        return Optional.empty();
+      }
+      matchBuilder.add(modeOnlySubQuery(parsed.modes()), Occur.SHOULD);
+    } else {
+      return Optional.empty();
+    }
+
+    // What the user asked for decides *which* entities match; the focus point only decides the order
+    // among them. The distance boost is therefore optional on top of a required match — as a plain
+    // SHOULD alongside the text it would admit anything near the focus point, however unrelated.
+    var builder = new BooleanQuery.Builder().add(matchBuilder.build(), Occur.MUST);
+    if (focusPoint != null) {
+      builder.add(distanceBoostQuery(focusPoint), Occur.SHOULD);
+    }
+    return Optional.of(builder.build());
+  }
+
+  /**
+   * The clauses matching one document type. Each type gets its own sub-query because the same text
+   * means different things depending on what it is matched against, and so has to be boosted
+   * differently.
+   */
+  private Query textSubQuery(
+    SearchType type,
+    ModeWordParser.ParsedQuery parsed,
+    String originalQuery
+  ) {
+    var builder = new BooleanQuery.Builder()
+      .setMinimumNumberShouldMatch(1)
+      .add(typeFilter(type), Occur.FILTER);
+
+    addTextClauses(builder, parsed.remainingText(), codeBoost(type));
+
+    if (parsed.hasModes()) {
+      // the words we stripped may have been part of a name, so keep matching the original text too
+      addOriginalTextClause(builder, originalQuery);
+
+      // a stop's mode is not indexed and is often ambiguous anyway, so stops are never excluded by
+      // it; for routes and patterns the mode is exactly what the user asked for
+      if (type != SearchType.STOP) {
+        builder.add(modeFilter(parsed.modes()), Occur.FILTER);
+      }
+    }
+    return builder.build();
+  }
+
+  private Query modeOnlySubQuery(Set<TransitMode> modes) {
+    return new BooleanQuery.Builder()
+      .add(typeFilter(SearchType.ROUTE), Occur.FILTER)
+      .add(modeFilter(modes), Occur.FILTER)
+      .add(new MatchAllDocsQuery(), Occur.MUST)
+      .build();
+  }
+
+  private void addTextClauses(BooleanQuery.Builder builder, String text, float codeBoost) {
+    Query nameQuery;
+    try {
+      // the text comes from a search box, so it is escaped rather than treated as query syntax
+      nameQuery = new QueryParser(NAME_NGRAM, analyzer).parse(QueryParser.escape(text));
+    } catch (ParseException e) {
+      throw new RuntimeException(e);
+    }
+
+    builder
+      .add(nameQuery, Occur.SHOULD)
+      .add(new TermQuery(new Term(NAME_NGRAM, analyzer.normalize(NAME_NGRAM, text))), Occur.SHOULD)
+      .add(fuzzyNameQuery(analyzer.normalize(NAME, text)), Occur.SHOULD)
+      .add(new PrefixQuery(new Term(NAME, analyzer.normalize(NAME, text))), Occur.SHOULD)
+      .add(
+        new BoostQuery(new TermQuery(new Term(CODE, analyzer.normalize(CODE, text))), codeBoost),
+        Occur.SHOULD
+      )
+      .add(new PrefixQuery(new Term(CODE, analyzer.normalize(CODE, text))), Occur.SHOULD);
+  }
+
+  /**
+   * Lucene's default of two edits is far too loose for short queries: at that distance "5" matches
+   * "11", so every two-digit route would come back for a query of "5". The allowance therefore grows
+   * with the length of the term, and a typo is never tolerated in the first character.
+   */
+  private static Query fuzzyNameQuery(BytesRef text) {
+    var term = new Term(NAME, text);
+    int length = text.utf8ToString().length();
+    int maxEdits = length <= 3 ? 0 : (length <= 6 ? 1 : 2);
+    if (maxEdits == 0) {
+      return new TermQuery(term);
+    }
+    return new FuzzyQuery(term, maxEdits, 1);
+  }
+
+  private void addOriginalTextClause(BooleanQuery.Builder builder, String originalQuery) {
+    try {
+      var query = new QueryParser(NAME_NGRAM, analyzer).parse(QueryParser.escape(originalQuery));
+      builder.add(new BoostQuery(query, ORIGINAL_TEXT_BOOST), Occur.SHOULD);
+    } catch (ParseException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private Query typeFilter(SearchType type) {
+    return new TermQuery(new Term(TYPE, analyzer.normalize(TYPE, type.documentType())));
+  }
+
+  private static Query modeFilter(Set<TransitMode> modes) {
+    var builder = new BooleanQuery.Builder().setMinimumNumberShouldMatch(1);
+    for (var mode : modes) {
+      // the mode field is not analyzed, so it is matched by its exact enum name
+      builder.add(new TermQuery(new Term(MODE, mode.name())), Occur.SHOULD);
+    }
+    return builder.build();
+  }
+
+  private static Query distanceBoostQuery(WgsCoordinate focusPoint) {
+    return LatLonPoint.newDistanceFeatureQuery(
+      LOCATION,
+      DISTANCE_BOOST,
+      focusPoint.latitude(),
+      focusPoint.longitude(),
+      DISTANCE_PIVOT_METERS
+    );
+  }
+
+  private static float codeBoost(SearchType type) {
+    return switch (type) {
+      case ROUTE -> ROUTE_CODE_BOOST;
+      case STOP -> STOP_CODE_BOOST;
+      case PATTERN -> PATTERN_CODE_BOOST;
+    };
+  }
+
+  @Nullable
+  private SearchHit toSearchHit(ScoreDoc scoreDoc) throws IOException {
+    var document = searcher.storedFields().document(scoreDoc.doc);
+    var type = SearchType.ofDocumentType(document.get(TYPE));
+    if (type == null) {
+      return null;
+    }
+    return new SearchHit(
+      FeedScopedId.parse(document.get(ID)),
+      type,
+      scoreDoc.score,
+      distanceOf(scoreDoc)
+    );
+  }
+
+  /**
+   * The distance the sort computed, so that callers do not have to recompute it. It is only present
+   * when sorting by distance, and is infinite for entities that have no location at all.
+   */
+  @Nullable
+  private static Double distanceOf(ScoreDoc scoreDoc) {
+    if (
+      scoreDoc instanceof FieldDoc fieldDoc &&
+      fieldDoc.fields.length > 1 &&
+      fieldDoc.fields[1] instanceof Double distance &&
+      Double.isFinite(distance)
+    ) {
+      return distance;
+    }
+    return null;
   }
 
   private StopCluster toStopCluster(Document document) {
@@ -181,9 +469,8 @@ public class LuceneIndex implements Serializable {
     return iwc;
   }
 
-  private static void addToIndex(
+  private static void addStopClusterToIndex(
     IndexWriter writer,
-    Class<?> type,
     String id,
     Collection<String> secondaryIds,
     Collection<I18NString> names,
@@ -191,7 +478,7 @@ public class LuceneIndex implements Serializable {
     double latitude,
     double longitude
   ) {
-    String typeName = type.getSimpleName();
+    String typeName = SearchType.STOP.documentType();
 
     Document document = new Document();
     document.add(new StoredField(ID, id));
@@ -215,6 +502,44 @@ public class LuceneIndex implements Serializable {
       document.add(new ContextSuggestField(SUGGEST, code, 1, typeName));
     }
 
+    addDocument(writer, document);
+  }
+
+  /**
+   * Indexes a route or a pattern. Unlike a stop these have no single location: a route is indexed at
+   * every stop it serves, because a line is "near" the user if any part of it is.
+   */
+  private static void addTransitDocumentToIndex(
+    IndexWriter writer,
+    SearchType type,
+    LuceneTransitDocument doc
+  ) {
+    Document document = new Document();
+    document.add(new StoredField(ID, doc.id()));
+    document.add(new TextField(TYPE, type.documentType(), Store.YES));
+
+    for (var name : doc.names()) {
+      document.add(new TextField(NAME, name, Store.YES));
+      document.add(new TextField(NAME_NGRAM, name, Store.YES));
+    }
+    for (var code : doc.codes()) {
+      document.add(new TextField(CODE, code, Store.YES));
+    }
+    if (doc.mode() != null) {
+      // not analyzed: the mode is matched as an exact enum name, never as free text
+      document.add(new StringField(MODE, doc.mode().name(), Store.YES));
+    }
+    for (var coordinate : doc.coordinates()) {
+      document.add(new LatLonPoint(LOCATION, coordinate.latitude(), coordinate.longitude()));
+      document.add(
+        new LatLonDocValuesField(LOCATION, coordinate.latitude(), coordinate.longitude())
+      );
+    }
+
+    addDocument(writer, document);
+  }
+
+  private static void addDocument(IndexWriter writer, Document document) {
     try {
       writer.addDocument(document);
     } catch (IOException ex) {

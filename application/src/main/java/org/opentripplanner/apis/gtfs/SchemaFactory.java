@@ -57,6 +57,8 @@ import org.opentripplanner.apis.gtfs.datafetchers.RiderCategoryImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.RouteImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.RouteTypeImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.RoutingErrorImpl;
+import org.opentripplanner.apis.gtfs.datafetchers.SearchResultImpl;
+import org.opentripplanner.apis.gtfs.datafetchers.SearchResultItemTypeResolver;
 import org.opentripplanner.apis.gtfs.datafetchers.StairsUseImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.StepFeatureTypeResolver;
 import org.opentripplanner.apis.gtfs.datafetchers.StopCallImpl;
@@ -152,6 +154,7 @@ public class SchemaFactory {
         .type("CallStopLocation", type -> type.typeResolver(new CallStopLocationTypeResolver()))
         .type("CallScheduledTime", type -> type.typeResolver(new CallScheduledTimeTypeResolver()))
         .type("StepFeature", type -> type.typeResolver(new StepFeatureTypeResolver()))
+        .type("SearchResultItem", type -> type.typeResolver(new SearchResultItemTypeResolver()))
         .type(typeWiring.build(AgencyImpl.class))
         .type(typeWiring.build(AlertImpl.class))
         .type(typeWiring.build(BikeParkImpl.class))
@@ -173,6 +176,7 @@ public class SchemaFactory {
         .type(typeWiring.build(PlanImpl.class))
         .type(typeWiring.build(QueryTypeImpl.class))
         .type(typeWiring.build(RouteImpl.class))
+        .type(typeWiring.build(SearchResultImpl.class))
         .type(typeWiring.build(serviceTimeRangeImpl.class))
         .type(typeWiring.build(stepImpl.class))
         .type(typeWiring.build(StopImpl.class))

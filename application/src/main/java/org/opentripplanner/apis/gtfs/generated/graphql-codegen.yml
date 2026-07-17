@@ -98,6 +98,8 @@ config:
     Route: org.opentripplanner.transit.model.network.Route#Route
     RoutingError: org.opentripplanner.routing.api.response.RoutingError#RoutingError
     RoutingErrorCode: org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLRoutingErrorCode#GraphQLRoutingErrorCode
+    SearchResult: org.opentripplanner.apis.gtfs.model.SearchResultModel#SearchResultModel
+    SearchResultType: org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLSearchResultType#GraphQLSearchResultType
     serviceTimeRange: Object
     step: org.opentripplanner.model.plan.walkstep.WalkStep#WalkStep
     Stop: Object # Can be either Stop or Station

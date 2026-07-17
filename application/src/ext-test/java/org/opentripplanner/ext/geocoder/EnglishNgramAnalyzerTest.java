@@ -141,6 +141,12 @@ class EnglishNgramAnalyzerTest {
     assertEquals(List.of("1sts", "1stst", "stst"), result);
   }
 
+  @ParameterizedTest
+  @CsvSource(value = { "Rīga:Riga", "Āgenskalns:Agenskalns", "Liepāja:Liepaja" }, delimiter = ':')
+  void foldsDiacritics(String input, String expected) {
+    assertEquals(tokenize(expected), tokenize(input));
+  }
+
   private List<String> tokenize(String text) {
     try (var analyzer = new EnglishNGramAnalyzer()) {
       List<String> result;

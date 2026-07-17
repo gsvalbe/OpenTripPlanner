@@ -94,7 +94,8 @@ class LegacyRouteRequestMapperTest implements PlanTestConstants {
         transitService::findRegularStopsByBoundingBox,
         linkingContextFactory
       ),
-      routeRequest
+      routeRequest,
+      null
     );
   }
 

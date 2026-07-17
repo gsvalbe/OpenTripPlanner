@@ -520,7 +520,8 @@ class GraphQLIntegrationTest {
       realtimeVehicleService,
       SchemaFactory.createSchemaWithDefaultInjection(routeRequest),
       FINDER,
-      routeRequest
+      routeRequest,
+      null
     );
   }
 

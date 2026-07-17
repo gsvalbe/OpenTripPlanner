@@ -8,6 +8,7 @@ import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.en.EnglishPossessiveFilter;
 import org.apache.lucene.analysis.en.PorterStemFilter;
+import org.apache.lucene.analysis.miscellaneous.ASCIIFoldingFilter;
 import org.apache.lucene.analysis.miscellaneous.CapitalizationFilter;
 import org.apache.lucene.analysis.ngram.NGramTokenFilter;
 import org.apache.lucene.analysis.pattern.PatternReplaceFilter;
@@ -22,6 +23,9 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
  * <p>
  * It also removes number suffixes in the American street names, like "147th Street", which will
  * be tokenized to "147 Street".
+ * <p>
+ * Diacritics are folded away, so "Rīga" is indexed as "riga" and found by a query typed without
+ * them.
  */
 class EnglishNGramAnalyzer extends Analyzer {
 
@@ -33,6 +37,9 @@ class EnglishNGramAnalyzer extends Analyzer {
     StandardTokenizer src = new StandardTokenizer();
     TokenStream result = new EnglishPossessiveFilter(src);
     result = new LowerCaseFilter(result);
+    // fold diacritics so that a query typed on a plain keyboard ("riga", "agenskalns") still finds
+    // names that carry them ("Rīga", "Āgenskalns")
+    result = new ASCIIFoldingFilter(result);
     result = new PatternReplaceFilter(result, NUMBER_SUFFIX_PATTERN, "$1", true);
     result = new StopFilter(result, EnglishAnalyzer.ENGLISH_STOP_WORDS_SET);
     result = new PorterStemFilter(result);

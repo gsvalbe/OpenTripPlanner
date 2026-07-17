@@ -21,8 +21,10 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.opentripplanner.apis.gtfs.GraphQLRequestContext;
@@ -33,12 +35,15 @@ import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLQueryTypeStop
 import org.opentripplanner.apis.gtfs.mapping.CanceledTripsFilterMapper;
 import org.opentripplanner.apis.gtfs.mapping.routerequest.LegacyRouteRequestMapper;
 import org.opentripplanner.apis.gtfs.mapping.routerequest.RouteRequestMapper;
+import org.opentripplanner.apis.gtfs.model.SearchResultModel;
 import org.opentripplanner.apis.gtfs.support.filter.PatternByDateFilterUtil;
 import org.opentripplanner.apis.gtfs.support.time.LocalDateRangeUtil;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.ext.fares.model.FareRuleSet;
 import org.opentripplanner.ext.fares.service.gtfs.GtfsFaresService;
 import org.opentripplanner.ext.fares.service.gtfs.v1.DefaultFareService;
+import org.opentripplanner.ext.geocoder.SearchHit;
+import org.opentripplanner.ext.geocoder.SearchType;
 import org.opentripplanner.framework.graphql.CountedConnection;
 import org.opentripplanner.framework.graphql.SimpleCountedListConnection;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
@@ -65,6 +70,7 @@ import org.opentripplanner.service.vehiclerental.VehicleRentalService;
 import org.opentripplanner.service.vehiclerental.model.VehicleRentalPlace;
 import org.opentripplanner.service.vehiclerental.model.VehicleRentalStation;
 import org.opentripplanner.service.vehiclerental.model.VehicleRentalVehicle;
+import org.opentripplanner.street.geometry.WgsCoordinate;
 import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.network.TripPattern;
@@ -88,6 +94,9 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   private final List<PlaceType> DEFAULT_PLACE_TYPES = List.copyOf(
     EnumSet.complementOf(EnumSet.of(PlaceType.STATION))
   );
+
+  /** Kept in sync with the default declared for the `first` argument in the schema. */
+  private static final int DEFAULT_SEARCH_RESULTS = 25;
 
   @Override
   public DataFetcher<Iterable<Agency>> agencies() {
@@ -659,6 +668,74 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
       }
       return routeStream.toList();
     };
+  }
+
+  @Override
+  public DataFetcher<Iterable<SearchResultModel>> search() {
+    return environment -> {
+      var args = new GraphQLTypes.GraphQLQueryTypeSearchArgs(environment.getArguments());
+      var context = environment.<GraphQLRequestContext>getContext();
+      var luceneIndex = context.luceneIndex();
+
+      if (luceneIndex == null) {
+        throw new IllegalArgumentException(
+          "Search is not available because the SandboxAPIGeocoder feature is disabled."
+        );
+      }
+
+      var focusPoint = focusPoint(args);
+      var types = searchTypes(args);
+      var limit = args.getGraphQLFirst() == null ? DEFAULT_SEARCH_RESULTS : args.getGraphQLFirst();
+
+      return luceneIndex
+        .search(args.getGraphQLText(), focusPoint, types, limit)
+        .stream()
+        .map(hit -> toSearchResult(hit, context.transitService()))
+        // the index is a startup snapshot, so an entity in it may since have disappeared
+        .filter(Objects::nonNull)
+        .toList();
+    };
+  }
+
+  @Nullable
+  private static WgsCoordinate focusPoint(GraphQLTypes.GraphQLQueryTypeSearchArgs args) {
+    if (args.getGraphQLFocusLat() == null || args.getGraphQLFocusLon() == null) {
+      return null;
+    }
+    return new WgsCoordinate(args.getGraphQLFocusLat(), args.getGraphQLFocusLon());
+  }
+
+  @Nullable
+  private static Set<SearchType> searchTypes(GraphQLTypes.GraphQLQueryTypeSearchArgs args) {
+    if (args.getGraphQLTypes() == null) {
+      return null;
+    }
+    return args
+      .getGraphQLTypes()
+      .stream()
+      .map(type -> SearchType.valueOf(type.name()))
+      .collect(Collectors.toSet());
+  }
+
+  /**
+   * Resolves the id in a hit against the transit model, so that the caller sees current data even
+   * though the match was made against the startup snapshot. Returns null if the entity is gone.
+   */
+  @Nullable
+  private static SearchResultModel toSearchResult(SearchHit hit, TransitService transitService) {
+    Object item = switch (hit.type()) {
+      case STOP -> {
+        Object stop = transitService.getStopLocation(hit.id());
+        yield stop != null ? stop : transitService.getStopLocationsGroup(hit.id());
+      }
+      case ROUTE -> transitService.getRoute(hit.id());
+      case PATTERN -> transitService.getTripPattern(hit.id());
+    };
+
+    if (item == null) {
+      return null;
+    }
+    return new SearchResultModel(item, hit.score(), hit.distanceMeters());
   }
 
   @Override

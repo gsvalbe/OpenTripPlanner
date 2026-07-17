@@ -1,6 +1,8 @@
 package org.opentripplanner.apis.gtfs;
 
 import graphql.schema.GraphQLSchema;
+import javax.annotation.Nullable;
+import org.opentripplanner.ext.geocoder.LuceneIndex;
 import org.opentripplanner.routing.api.RoutingService;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.fares.FareService;
@@ -22,7 +24,11 @@ public record GraphQLRequestContext(
   RealtimeVehicleService realTimeVehicleService,
   GraphQLSchema schema,
   GraphFinder graphFinder,
-  RouteRequest defaultRouteRequest
+  RouteRequest defaultRouteRequest,
+  /**
+   * The search index, or null when the geocoder feature is switched off and it was never built.
+   */
+  @Nullable LuceneIndex luceneIndex
 ) {
   public static GraphQLRequestContext ofServerContext(OtpServerRequestContext context) {
     return new GraphQLRequestContext(
@@ -35,7 +41,8 @@ public record GraphQLRequestContext(
       context.realtimeVehicleService(),
       context.gtfsSchema(),
       context.graphFinder(),
-      context.defaultRouteRequest()
+      context.defaultRouteRequest(),
+      context.lucenceIndex()
     );
   }
 

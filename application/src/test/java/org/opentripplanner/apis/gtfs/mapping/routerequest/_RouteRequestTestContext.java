@@ -87,7 +87,8 @@ class _RouteRequestTestContext {
         transitService::findRegularStopsByBoundingBox,
         linkingContextFactory
       ),
-      routeRequest
+      routeRequest,
+      null
     );
   }
 
