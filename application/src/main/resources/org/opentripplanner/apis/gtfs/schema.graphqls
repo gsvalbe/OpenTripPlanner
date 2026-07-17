@@ -494,7 +494,7 @@ type DepartureRow implements Node & PlaceInterface {
     numberOfDepartures: Int = 1,
     "If false, returns also canceled trips"
     omitCanceled: Boolean = true,
-    "If true, only those departures which allow boarding are returned"
+    "If true, only those departures which allow boarding are returned. If false, all calls are returned, including those which allow neither boarding nor alighting."
     omitNonPickups: Boolean = false,
     "Return rows departing after this time. Time format: Unix timestamp in seconds. Default: current time."
     startTime: Long = 0,
@@ -2410,7 +2410,7 @@ type Stop implements Node & PlaceInterface {
     numberOfDepartures: Int = 2,
     "If false, returns also canceled trips"
     omitCanceled: Boolean = true,
-    "If true, only those departures which allow boarding are returned"
+    "If true, only those departures which allow boarding are returned. If false, all calls are returned, including those which allow neither boarding nor alighting."
     omitNonPickups: Boolean = false,
     "Return  departures after this time. Format: Unix timestamp in seconds. Default value: current time"
     startTime: Long = 0,
@@ -2424,7 +2424,7 @@ type Stop implements Node & PlaceInterface {
     numberOfDepartures: Int = 5,
     "If false, returns also canceled trips"
     omitCanceled: Boolean = true,
-    "If true, only those departures which allow boarding are returned"
+    "If true, only those departures which allow boarding are returned. If false, all calls are returned, including those which allow neither boarding nor alighting."
     omitNonPickups: Boolean = false,
     "Return departures after this time. Format: Unix timestamp in seconds. Default value: current time"
     startTime: Long = 0,
@@ -2437,7 +2437,7 @@ type Stop implements Node & PlaceInterface {
     date: String,
     "If false, returns also canceled trips"
     omitCanceled: Boolean = false,
-    "If true, only those departures which allow boarding are returned"
+    "If true, only those departures which allow boarding are returned. If false, all calls are returned, including those which allow neither boarding nor alighting."
     omitNonPickups: Boolean = false
   ): [StoptimesInPattern]
   "Returns list of stoptimes (arrivals and departures) at this stop"
@@ -2445,7 +2445,7 @@ type Stop implements Node & PlaceInterface {
     numberOfDepartures: Int = 5,
     "If false, returns also canceled trips"
     omitCanceled: Boolean = true,
-    "If true, only those departures which allow boarding are returned"
+    "If true, only those departures which allow boarding are returned. If false, all calls are returned, including those which allow neither boarding nor alighting."
     omitNonPickups: Boolean = false,
     "Return departures after this time. Format: Unix timestamp in seconds. Default value: current time"
     startTime: Long = 0,

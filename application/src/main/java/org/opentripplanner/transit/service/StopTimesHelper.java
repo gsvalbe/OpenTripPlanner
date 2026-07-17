@@ -1,5 +1,6 @@
 package org.opentripplanner.transit.service;
 
+import static org.opentripplanner.transit.service.ArrivalDeparture.ALL;
 import static org.opentripplanner.transit.service.ArrivalDeparture.ARRIVALS;
 import static org.opentripplanner.transit.service.ArrivalDeparture.DEPARTURES;
 import static org.opentripplanner.utils.time.ServiceDateUtils.calculateRunningDates;
@@ -332,6 +333,10 @@ public class StopTimesHelper {
     ArrivalDeparture arrivalDeparture,
     int stopPos
   ) {
+    if (arrivalDeparture == ALL) {
+      return false;
+    }
+
     boolean noPickup = pattern.getBoardType(stopPos).is(PickDrop.NONE);
     boolean noDropoff = pattern.getAlightType(stopPos).is(PickDrop.NONE);
 
@@ -341,10 +346,7 @@ public class StopTimesHelper {
     if (noPickup && arrivalDeparture == DEPARTURES) {
       return true;
     }
-    if (noDropoff && arrivalDeparture == ARRIVALS) {
-      return true;
-    }
-    return false;
+    return noDropoff && arrivalDeparture == ARRIVALS;
   }
 
   private static boolean skipByStopCancellation(

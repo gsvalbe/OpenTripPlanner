@@ -52,7 +52,7 @@ public class DepartureRowImpl implements GraphQLDataFetchers.GraphQLDepartureRow
         GraphQLUtils.getTimeOrNow(args.getGraphQLStartTime()),
         Duration.ofSeconds(args.getGraphQLTimeRange()),
         args.getGraphQLNumberOfDepartures(),
-        args.getGraphQLOmitNonPickups() ? ArrivalDeparture.DEPARTURES : ArrivalDeparture.BOTH
+        args.getGraphQLOmitNonPickups() ? ArrivalDeparture.DEPARTURES : ArrivalDeparture.ALL
       );
     };
   }

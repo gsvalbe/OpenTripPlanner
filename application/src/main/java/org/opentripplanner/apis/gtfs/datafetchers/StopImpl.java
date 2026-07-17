@@ -295,7 +295,7 @@ public class StopImpl implements GraphQLDataFetchers.GraphQLStop {
 
           var arrivalDeparture = args.getGraphQLOmitNonPickups()
             ? ArrivalDeparture.DEPARTURES
-            : ArrivalDeparture.BOTH;
+            : ArrivalDeparture.ALL;
 
           var time = GraphQLUtils.getTimeOrNow(args.getGraphQLStartTime());
           var timeRange = Duration.ofSeconds(args.getGraphQLTimeRange());
@@ -348,7 +348,7 @@ public class StopImpl implements GraphQLDataFetchers.GraphQLStop {
           GraphQLUtils.getTimeOrNow(args.getGraphQLStartTime()),
           Duration.ofSeconds(args.getGraphQLTimeRange()),
           args.getGraphQLNumberOfDepartures(),
-          args.getGraphQLOmitNonPickups() ? ArrivalDeparture.DEPARTURES : ArrivalDeparture.BOTH,
+          args.getGraphQLOmitNonPickups() ? ArrivalDeparture.DEPARTURES : ArrivalDeparture.ALL,
           !args.getGraphQLOmitCanceled()
         );
 
@@ -381,7 +381,7 @@ public class StopImpl implements GraphQLDataFetchers.GraphQLStop {
         transitService.findStopTimesInPattern(
           stop,
           date,
-          args.getGraphQLOmitNonPickups() ? ArrivalDeparture.DEPARTURES : ArrivalDeparture.BOTH,
+          args.getGraphQLOmitNonPickups() ? ArrivalDeparture.DEPARTURES : ArrivalDeparture.ALL,
           !args.getGraphQLOmitCanceled()
         );
 
@@ -409,7 +409,7 @@ public class StopImpl implements GraphQLDataFetchers.GraphQLStop {
             GraphQLUtils.getTimeOrNow(args.getGraphQLStartTime()),
             Duration.ofSeconds(args.getGraphQLTimeRange()),
             args.getGraphQLNumberOfDepartures(),
-            args.getGraphQLOmitNonPickups() ? ArrivalDeparture.DEPARTURES : ArrivalDeparture.BOTH,
+            args.getGraphQLOmitNonPickups() ? ArrivalDeparture.DEPARTURES : ArrivalDeparture.ALL,
             !args.getGraphQLOmitCanceled()
           )
           .stream();
