@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -98,7 +99,15 @@ public class LuceneIndex implements Serializable {
    */
   private static final float ORIGINAL_TEXT_BOOST = 0.5f;
 
-  private static final float DISTANCE_BOOST = 10.0f;
+  /**
+   * The proximity boost is deliberately small: it is added on top of the text-match score to break
+   * near-ties in favour of what is closer, not to override a clearly better match somewhere else.
+   * The secondary distance sort already orders equally scoring results nearest-first, so this only
+   * needs to nudge results whose text relevance is comparable. A larger value lets a mediocre nearby
+   * match outrank an exact match one city over — for a search from Riga, "Krustpils iela" would then
+   * beat the "Krustpils" station in Jēkabpils.
+   */
+  private static final float DISTANCE_BOOST = 3.0f;
 
   /**
    * The distance at which the proximity boost is halved. Tuned for city-scale search, where
@@ -487,9 +496,19 @@ public class LuceneIndex implements Serializable {
     }
     document.add(new TextField(TYPE, typeName, Store.YES));
     for (var name : names) {
-      document.add(new TextField(NAME, Objects.toString(name), Store.YES));
-      document.add(new TextField(NAME_NGRAM, Objects.toString(name), Store.YES));
-      document.add(new ContextSuggestField(SUGGEST, Objects.toString(name), 1, typeName));
+      var nameString = Objects.toString(name);
+      document.add(new TextField(NAME, nameString, Store.YES));
+      document.add(new TextField(NAME_NGRAM, nameString, Store.YES));
+      document.add(new ContextSuggestField(SUGGEST, nameString, 1, typeName));
+
+      // A stop is often known by a shorter form of its full name: the place before a "(...)"
+      // qualifier, or one side of an "A/B" name that joins two adjacent places. Index each such form
+      // as a name of its own so it matches as strongly as a stop actually named that, rather than as
+      // a few tokens buried in a longer name.
+      for (var alternative : alternativeNames(nameString)) {
+        document.add(new TextField(NAME, alternative, Store.NO));
+        document.add(new TextField(NAME_NGRAM, alternative, Store.NO));
+      }
     }
 
     document.add(new LatLonPoint(LOCATION, latitude, longitude));
@@ -537,6 +556,35 @@ public class LuceneIndex implements Serializable {
     }
 
     addDocument(writer, document);
+  }
+
+  /**
+   * The additional names under which a stop should be findable, beyond its full name: each side of a
+   * "A/B" name, and each name with its "(...)" qualifier removed. Blanks, and anything equal to the
+   * full name, are dropped, so a plain name like "Krustpils iela" yields nothing.
+   */
+  static List<String> alternativeNames(String name) {
+    var result = new LinkedHashSet<String>();
+    for (var part : name.split("/")) {
+      var trimmed = part.strip();
+      if (!trimmed.isBlank() && !trimmed.equals(name)) {
+        result.add(trimmed);
+      }
+      var withoutBrackets = stripBracketedText(trimmed);
+      if (!withoutBrackets.isBlank() && !withoutBrackets.equals(name)) {
+        result.add(withoutBrackets);
+      }
+    }
+    return List.copyOf(result);
+  }
+
+  /**
+   * Removes any {@code (...)} sections from a name and collapses the resulting whitespace, so that
+   * "Rīga (Prāgas iela)" becomes "Rīga". Returns an empty string if nothing is left outside the
+   * brackets.
+   */
+  static String stripBracketedText(String name) {
+    return name.replaceAll("\\([^)]*\\)", " ").replaceAll("\\s+", " ").strip();
   }
 
   private static void addDocument(IndexWriter writer, Document document) {

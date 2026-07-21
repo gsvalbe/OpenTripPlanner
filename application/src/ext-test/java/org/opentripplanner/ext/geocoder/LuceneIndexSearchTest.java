@@ -45,6 +45,26 @@ class LuceneIndexSearchTest {
     .withCoordinate(56.5051, 21.0101)
     .build();
 
+  // a nearby partial match and, ~140 km east in Jēkabpils, the exact match it must not outrank
+  private static final RegularStop KRUSTPILS_IELA = TEST_MODEL.stop("Krustpils iela")
+    .withCoordinate(56.951, 24.101)
+    .build();
+  private static final RegularStop KRUSTPILS = TEST_MODEL.stop("Krustpils")
+    .withCoordinate(56.507, 25.857)
+    .build();
+
+  // a stop whose real name qualifies the place in brackets
+  private static final RegularStop RIGA_PRAGAS = TEST_MODEL.stop("Rīga (Prāgas iela)")
+    .withCoordinate(56.949, 24.099)
+    .build();
+
+  // a stop whose name joins two adjacent places with a slash
+  private static final RegularStop BOTANISKAIS = TEST_MODEL.stop(
+    "Botāniskais dārzs/Rīgas Stradiņa universitāte"
+  )
+    .withCoordinate(56.955, 24.105)
+    .build();
+
   private static final Route TRAM_5 = TimetableRepositoryForTest.route("tram-5")
     .withShortName("5")
     .withLongName(I18NString.of("Mīlgrāvis - Ķengarags"))
@@ -117,9 +137,16 @@ class LuceneIndexSearchTest {
   @BeforeAll
   static void setup() {
     var siteRepository = TEST_MODEL.siteRepositoryBuilder();
-    List.of(DEPO_IELA, CENTRALTIRGUS, TRAMVAJU_DEPO, LIEPAJAS_OSTA).forEach(
-      siteRepository::withRegularStop
-    );
+    List.of(
+      DEPO_IELA,
+      CENTRALTIRGUS,
+      TRAMVAJU_DEPO,
+      LIEPAJAS_OSTA,
+      KRUSTPILS_IELA,
+      KRUSTPILS,
+      RIGA_PRAGAS,
+      BOTANISKAIS
+    ).forEach(siteRepository::withRegularStop);
     var timetableRepository = new TimetableRepository(siteRepository.build());
     timetableRepository.index();
 
@@ -274,6 +301,45 @@ class LuceneIndexSearchTest {
   @Test
   void blankQueryReturnsNothing() {
     assertThat(index.search("   ", null, null, 10)).isEmpty();
+  }
+
+  @Test
+  void exactNameOutranksNearbyPartialMatchesEvenWhenFarAway() {
+    var hits = index.search("Krustpils", RIGA, null, 10);
+
+    assertThat(hits.getFirst().id()).isEqualTo(KRUSTPILS.getId());
+  }
+
+  @Test
+  void bracketedStopIsFoundByThePartBeforeTheBrackets() {
+    var hits = ids(index.search("Rīga", RIGA, null, 10));
+
+    assertThat(hits).contains(RIGA_PRAGAS.getId());
+  }
+
+  @Test
+  void bracketedTextIsStrippedFromNames() {
+    assertThat(LuceneIndex.stripBracketedText("Rīga (Prāgas iela)")).isEqualTo("Rīga");
+    assertThat(LuceneIndex.stripBracketedText("Jēkabpils (Kurzemes iela)")).isEqualTo("Jēkabpils");
+    assertThat(LuceneIndex.stripBracketedText("Krustpils iela")).isEqualTo("Krustpils iela");
+  }
+
+  @Test
+  void slashJoinedStopIsFoundByEitherSide() {
+    var byFirst = ids(index.search("Botāniskais dārzs", RIGA, null, 10));
+    var bySecond = ids(index.search("Rīgas Stradiņa universitāte", RIGA, null, 10));
+
+    assertThat(byFirst).contains(BOTANISKAIS.getId());
+    assertThat(bySecond).contains(BOTANISKAIS.getId());
+  }
+
+  @Test
+  void alternativeNamesSplitOnSlashAndStripBrackets() {
+    assertThat(
+      LuceneIndex.alternativeNames("Botāniskais dārzs/Rīgas Stradiņa universitāte")
+    ).containsExactly("Botāniskais dārzs", "Rīgas Stradiņa universitāte");
+    assertThat(LuceneIndex.alternativeNames("Rīga (Prāgas iela)")).containsExactly("Rīga");
+    assertThat(LuceneIndex.alternativeNames("Krustpils iela")).isEmpty();
   }
 
   private static List<FeedScopedId> ids(List<SearchHit> hits) {
