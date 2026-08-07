@@ -1,6 +1,7 @@
 package org.opentripplanner.apis.gtfs.datafetchers;
 
 import static org.opentripplanner.apis.gtfs.GraphQLUtils.stopTimeToInt;
+import static org.opentripplanner.apis.gtfs.GraphQLUtils.toGraphQL;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
@@ -105,6 +106,11 @@ public class StoptimeImpl implements GraphQLDataFetchers.GraphQLStoptime {
   @Override
   public DataFetcher<Trip> trip() {
     return environment -> getSource(environment).getTrip();
+  }
+
+  @Override
+  public DataFetcher<GraphQLTypes.GraphQLWheelchairBoarding> wheelchairAccessible() {
+    return environment -> toGraphQL(getSource(environment).getWheelchairAccessibility());
   }
 
   @Override

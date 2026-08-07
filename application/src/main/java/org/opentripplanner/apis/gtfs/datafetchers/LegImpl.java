@@ -1,5 +1,7 @@
 package org.opentripplanner.apis.gtfs.datafetchers;
 
+import static org.opentripplanner.apis.gtfs.GraphQLUtils.toGraphQL;
+
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import java.util.Objects;
@@ -291,6 +293,11 @@ public class LegImpl implements GraphQLDataFetchers.GraphQLLeg {
   @Override
   public DataFetcher<Boolean> walkingBike() {
     return environment -> getSource(environment).walkingBike();
+  }
+
+  @Override
+  public DataFetcher<GraphQLTypes.GraphQLWheelchairBoarding> wheelchairAccessible() {
+    return environment -> toGraphQL(getSource(environment).tripWheelchairAccessibility());
   }
 
   @Override

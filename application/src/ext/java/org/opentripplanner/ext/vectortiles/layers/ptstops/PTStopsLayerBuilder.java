@@ -17,8 +17,11 @@ import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.service.TransitService;
 
 public class PTStopsLayerBuilder extends LayerBuilder<StopOrStation> {
-  static Map<PTStopsLayerBuilder.MapperType, BiFunction<TransitService, Locale, PropertyMapper<StopOrStation>>> mappers =
-    Map.of(PTStopsLayerBuilder.MapperType.Pieturas, PieturasStopPropertyMapper::create);
+
+  static Map<
+    PTStopsLayerBuilder.MapperType,
+    BiFunction<TransitService, Locale, PropertyMapper<StopOrStation>>
+  > mappers = Map.of(PTStopsLayerBuilder.MapperType.Pieturas, PieturasStopPropertyMapper::create);
 
   private final TransitService transitService;
   private final Predicate<RegularStop> filter;
@@ -29,7 +32,9 @@ public class PTStopsLayerBuilder extends LayerBuilder<StopOrStation> {
     Locale locale
   ) {
     super(
-      mappers.get(PTStopsLayerBuilder.MapperType.valueOf(layerParameters.mapper())).apply(transitService, locale),
+      mappers
+        .get(PTStopsLayerBuilder.MapperType.valueOf(layerParameters.mapper()))
+        .apply(transitService, locale),
       layerParameters.name(),
       layerParameters.expansionFactor()
     );
@@ -46,11 +51,7 @@ public class PTStopsLayerBuilder extends LayerBuilder<StopOrStation> {
       .map(StopOrStation::new)
       .toList();
 
-    var stations = transitService
-      .listStations()
-      .stream()
-      .map(StopOrStation::new)
-      .toList();
+    var stations = transitService.listStations().stream().map(StopOrStation::new).toList();
 
     return Stream.concat(regStops.stream(), stations.stream())
       .map(st -> {

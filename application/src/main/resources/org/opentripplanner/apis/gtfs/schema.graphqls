@@ -910,6 +910,15 @@ type Leg {
   trip: Trip
   "Whether this leg is walking with a bike."
   walkingBike: Boolean
+  """
+  For transit legs, whether the vehicle running this trip can be boarded by a wheelchair. For
+  non-transit legs, `null`.
+    
+  Unlike `trip { wheelchairAccessible }`, which always returns the scheduled value, this field
+  returns the real-time value reported by a GTFS-RT `VehicleDescriptor` when one is available,
+  falling back to the scheduled value otherwise.
+  """
+  wheelchairAccessible: WheelchairBoarding
 }
 
 """
@@ -2627,6 +2636,14 @@ type Stoptime {
   timepoint: Boolean
   "Trip which this stoptime is for"
   trip: Trip
+  """
+  Whether the vehicle running this trip on this service date can be boarded by a wheelchair.
+    
+  Unlike `trip { wheelchairAccessible }`, which always returns the scheduled value, this field
+  returns the real-time value reported by a GTFS-RT `VehicleDescriptor` when one is available,
+  falling back to the scheduled value otherwise.
+  """
+  wheelchairAccessible: WheelchairBoarding
 }
 
 "Stoptimes grouped by pattern"

@@ -18,10 +18,7 @@ public class PieturasStopPropertyMapper extends PropertyMapper<StopOrStation> {
     this.i18NStringMapper = new I18NStringMapper(locale);
   }
 
-  protected static PieturasStopPropertyMapper create(
-    TransitService transitService,
-    Locale locale
-  ) {
+  protected static PieturasStopPropertyMapper create(TransitService transitService, Locale locale) {
     return new PieturasStopPropertyMapper(transitService, locale);
   }
 

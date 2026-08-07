@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes;
+import org.opentripplanner.core.model.accessibility.Accessibility;
 import org.opentripplanner.model.plan.PlanTestConstants;
 import org.opentripplanner.model.plan.leg.ScheduledTransitLeg;
 import org.opentripplanner.model.plan.leg.ScheduledTransitLegBuilder;
@@ -41,7 +42,9 @@ class LegImplTest implements PlanTestConstants {
     GROUP_STOP,
     REGULAR_STOP
   );
-  private static final Trip TRIP = TimetableRepositoryForTest.trip("trip1").build();
+  private static final Trip TRIP = TimetableRepositoryForTest.trip("trip1")
+    .withWheelchairBoarding(Accessibility.POSSIBLE)
+    .build();
   private static final TripPattern PATTERN = TimetableRepositoryForTest.tripPattern(
     "p",
     TRIP.getRoute()
@@ -117,6 +120,42 @@ class LegImplTest implements PlanTestConstants {
   void walkLegWithFilter() throws Exception {
     var env = dataFetchingEnvironment(WALK_LEG, INCLUDE_STOP_ONLY);
     assertNull(IMPL.intermediateStops().get(env));
+  }
+
+  @Test
+  void wheelchairAccessibleFallsBackToScheduledValue() throws Exception {
+    var env = dataFetchingEnvironment(LEG);
+    assertThat(IMPL.wheelchairAccessible().get(env)).isEqualTo(
+      GraphQLTypes.GraphQLWheelchairBoarding.POSSIBLE
+    );
+  }
+
+  @Test
+  void wheelchairAccessibleUsesRealTimeValue() throws Exception {
+    var realTimeTripTimes = TRIP_TIMES.createRealTimeFromScheduledTimes()
+      .withWheelchairAccessibility(Accessibility.NOT_POSSIBLE)
+      .build();
+    var leg = new ScheduledTransitLegBuilder<>()
+      .withStartTime(TIME)
+      .withEndTime(TIME)
+      .withZoneId(TIME.getZone())
+      .withServiceDate(TIME.toLocalDate())
+      .withTripTimes(realTimeTripTimes)
+      .withBoardStopIndexInPattern(0)
+      .withAlightStopIndexInPattern(4)
+      .withTripPattern(PATTERN)
+      .build();
+
+    var env = dataFetchingEnvironment(leg);
+    assertThat(IMPL.wheelchairAccessible().get(env)).isEqualTo(
+      GraphQLTypes.GraphQLWheelchairBoarding.NOT_POSSIBLE
+    );
+  }
+
+  @Test
+  void wheelchairAccessibleIsNullForStreetLeg() throws Exception {
+    var env = dataFetchingEnvironment(WALK_LEG);
+    assertNull(IMPL.wheelchairAccessible().get(env));
   }
 
   private static Stream<StopLocation> toStops(Iterable<StopArrival> stopArrivals) {

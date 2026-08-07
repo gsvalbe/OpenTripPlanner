@@ -466,6 +466,9 @@ public class GraphQLDataFetchers {
     DataFetcher<Boolean> transitLeg();
     DataFetcher<Trip> trip();
     DataFetcher<Boolean> walkingBike();
+    DataFetcher<
+      org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLWheelchairBoarding
+    > wheelchairAccessible();
   }
 
   /**
@@ -966,6 +969,9 @@ public class GraphQLDataFetchers {
     DataFetcher<Integer> stopPositionInPattern();
     DataFetcher<Boolean> timepoint();
     DataFetcher<Trip> trip();
+    DataFetcher<
+      org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLWheelchairBoarding
+    > wheelchairAccessible();
   }
 
   /** Stoptimes grouped by pattern */

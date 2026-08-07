@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import javax.annotation.Nullable;
+import org.opentripplanner.core.model.accessibility.Accessibility;
 import org.opentripplanner.core.model.i18n.I18NString;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.site.StopLocation;
@@ -323,6 +324,15 @@ public class TripTimeOnDate {
 
   public OccupancyStatus getOccupancyStatus() {
     return tripTimes.getOccupancyStatus(stopPosition);
+  }
+
+  /**
+   * The wheelchair accessibility of the vehicle running this trip on this service date. This is the
+   * real-time value if one has been reported, and the scheduled one otherwise.
+   */
+  @Nullable
+  public Accessibility getWheelchairAccessibility() {
+    return tripTimes.getWheelchairAccessibility();
   }
 
   public long getServiceDayMidnight() {

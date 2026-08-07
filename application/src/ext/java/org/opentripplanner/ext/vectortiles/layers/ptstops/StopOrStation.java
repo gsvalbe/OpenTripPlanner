@@ -20,6 +20,7 @@ import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.service.TransitService;
 
 public class StopOrStation {
+
   private final Type stopType;
   private final I18NString name;
   private final I18NString desc;
@@ -78,7 +79,8 @@ public class StopOrStation {
   }
 
   public enum Type {
-    STOP, STATION
+    STOP,
+    STATION,
   }
 
   public String getMode(TransitService transitService) {
@@ -95,7 +97,6 @@ public class StopOrStation {
       .orElse(null);
   }
 
-
   public String getRoutes(TransitService transitService) {
     try {
       var objects = stopLocations
@@ -106,8 +107,12 @@ public class StopOrStation {
           var obj = OBJECT_MAPPER.createObjectNode();
           obj.put("mode", route.getMode().name());
           obj.put("name", route.getName());
-          if (route.getColor() != null) { obj.put("color", route.getColor()); }
-          if (route.getTextColor() != null) { obj.put("textColor", route.getTextColor()); }
+          if (route.getColor() != null) {
+            obj.put("color", route.getColor());
+          }
+          if (route.getTextColor() != null) {
+            obj.put("textColor", route.getTextColor());
+          }
           return obj;
         })
         .toList();
