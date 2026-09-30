@@ -31,8 +31,10 @@ import org.opentripplanner.model.plan.Leg;
 import org.opentripplanner.model.plan.leg.ScheduledTransitLeg;
 import org.opentripplanner.routing.core.FareType;
 import org.opentripplanner.routing.fares.FareService;
+import org.opentripplanner.routing.fares.StopFareIdentity;
 import org.opentripplanner.transit.model.basic.Money;
 import org.opentripplanner.transit.model.site.FareZone;
+import org.opentripplanner.transit.model.site.StopLocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,12 +80,20 @@ public class DefaultFareService implements FareService {
   /** For each fare type (regular, student, etc...) the collection of rules that apply. */
   protected Map<FareType, Collection<FareRuleSet>> fareRulesPerType;
 
+  /** {@link #fareRulesPerType} indexed by fare type and the feed of the fare attribute. */
+  private Map<FareType, Map<String, Collection<FareRuleSet>>> fareRulesPerTypeAndFeed;
+
+  /** Whether any fare attribute limits the duration of the journey it is valid for. */
+  private boolean journeyDurationRulesExist;
+
   public DefaultFareService() {
     fareRulesPerType = new HashMap<>();
+    fareRulesPerTypeAndFeed = Map.of();
   }
 
   public void addFareRules(FareType fareType, Collection<FareRuleSet> fareRules) {
     fareRulesPerType.put(fareType, new ArrayList<>(fareRules));
+    indexFareRules();
   }
 
   public Map<FareType, Collection<FareRuleSet>> getFareRulesPerType() {
@@ -142,18 +152,45 @@ public class DefaultFareService implements FareService {
    */
   @Nullable
   protected Collection<FareRuleSet> fareRulesForFeed(FareType fareType, String feedId) {
-    var fareRulesByTypeAndFeed = fareRulesPerType
-      .entrySet()
-      .stream()
-      .collect(
-        Collectors.toMap(Map.Entry::getKey, rules ->
-          rules
-            .getValue()
-            .stream()
-            .collect(Collectors.groupingBy(rule -> rule.getFareAttribute().getId().getFeedId()))
-        )
-      );
-    return fareRulesByTypeAndFeed.get(fareType).get(feedId);
+    var rulesForType = fareRulesPerTypeAndFeed.get(fareType);
+    return rulesForType == null ? null : rulesForType.get(feedId);
+  }
+
+  @Override
+  public Optional<StopFareIdentity> fareIdentity(StopLocation stop) {
+    return legFaresDependOnlyOnStops()
+      ? Optional.of(StopFareIdentity.ofFareZones(stop))
+      : Optional.empty();
+  }
+
+  /**
+   * Returns true if the fare of a single leg is fully determined by its trip and the fare zones of
+   * the stops it visits. Subclasses which implement custom fare logic must override this.
+   * <p>
+   * The other inputs of {@link #getBestFareAndId(FareType, List, Collection)} are constant for a
+   * single leg: it uses no transfers and its trip time is zero. Only a fare attribute limiting the
+   * journey duration makes the fare depend on the alighting time as well as on the zones.
+   */
+  protected boolean legFaresDependOnlyOnStops() {
+    return !journeyDurationRulesExist;
+  }
+
+  private void indexFareRules() {
+    Map<FareType, Map<String, Collection<FareRuleSet>>> index = new HashMap<>();
+    boolean journeyDurationRules = false;
+    for (var rulesForType : fareRulesPerType.entrySet()) {
+      Map<String, Collection<FareRuleSet>> rulesByFeed = new HashMap<>();
+      for (var ruleSet : rulesForType.getValue()) {
+        var attribute = ruleSet.getFareAttribute();
+        rulesByFeed
+          .computeIfAbsent(attribute.getId().getFeedId(), _ -> new ArrayList<>())
+          .add(ruleSet);
+        journeyDurationRules |= attribute.isJourneyDurationSet();
+      }
+      index.put(rulesForType.getKey(), rulesByFeed);
+    }
+    this.fareRulesPerTypeAndFeed = index;
+    this.journeyDurationRulesExist = journeyDurationRules;
   }
 
   /**

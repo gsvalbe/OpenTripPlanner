@@ -8,6 +8,7 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -18,6 +19,8 @@ import org.opentripplanner.ext.fares.model.FareTransferRule;
 import org.opentripplanner.model.fare.FareOffer;
 import org.opentripplanner.model.fare.FareProduct;
 import org.opentripplanner.model.plan.TransitLeg;
+import org.opentripplanner.routing.fares.StopFareIdentity;
+import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.utils.collection.SetUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +36,7 @@ class FareLookupService implements Serializable {
   private final AreaMatcher areaMatcher;
   private final NetworkMatcher networkMatcher;
   private final TimeframeMatcher timeframeMatcher;
+  private final boolean legRulesDependOnlyOnStops;
 
   FareLookupService(
     List<FareLegRule> legRules,
@@ -47,6 +51,31 @@ class FareLookupService implements Serializable {
     this.areaMatcher = new AreaMatcher(rulePriorityMatcher, legRules, stopAreas);
     this.networkMatcher = new NetworkMatcher(rulePriorityMatcher, legRules);
     this.timeframeMatcher = new TimeframeMatcher(serviceDates);
+    this.legRulesDependOnlyOnStops = this.legRules.stream().allMatch(
+      FareLookupService::dependsOnlyOnStops
+    );
+  }
+
+  /**
+   * The fare-relevant identity of a stop, or empty if the leg rules also match on something other
+   * than the areas of a leg's stops.
+   */
+  Optional<StopFareIdentity> fareIdentity(StopLocation stop) {
+    return legRulesDependOnlyOnStops
+      ? Optional.of(StopFareIdentity.ofFareAreas(stop, areaMatcher.areasOf(stop)))
+      : Optional.empty();
+  }
+
+  /**
+   * A rule which matches on the distance travelled or on the time of day makes the fare of a leg
+   * depend on more than the areas of its stops.
+   */
+  private static boolean dependsOnlyOnStops(FareLegRule rule) {
+    return (
+      rule.fareDistance() == null &&
+      rule.fromTimeframes().isEmpty() &&
+      rule.toTimeframes().isEmpty()
+    );
   }
 
   /**

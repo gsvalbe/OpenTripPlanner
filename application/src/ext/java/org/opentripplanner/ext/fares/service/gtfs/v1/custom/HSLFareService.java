@@ -31,6 +31,14 @@ public class HSLFareService extends DefaultFareService {
   // this is not Float.MAX_VALUE to avoid overflow which would then make debugging harder
   public static final Money MAX_PRICE = Money.euros(999999f);
 
+  /**
+   * This service applies custom fare logic which is not expressed in terms of fare zones alone.
+   */
+  @Override
+  protected boolean legFaresDependOnlyOnStops() {
+    return false;
+  }
+
   @Override
   protected boolean shouldCombineInterlinedLegs(
     ScheduledTransitLeg previousLeg,
@@ -71,8 +79,8 @@ public class HSLFareService extends DefaultFareService {
     for (Leg leg : legs) {
       lastRideStartTime = leg.startTime();
       if (agency == null) {
-        agency = leg.agency().getId().getId().toString();
-      } else if (agency != leg.agency().getId().getId().toString()) {
+        agency = leg.agency().getId().getId();
+      } else if (agency != leg.agency().getId().getId()) {
         singleAgency = false;
       }
 
@@ -92,18 +100,13 @@ public class HSLFareService extends DefaultFareService {
           leg.from().stop.getFirstZoneAsString(),
           leg.to().stop.getFirstZoneAsString()
         );
-        boolean isSpecialRoute = false;
-
-        if (
-          !ruleSet.getRouteOriginDestinations().isEmpty() &&
+        boolean isSpecialRoute = !ruleSet.getRouteOriginDestinations().isEmpty() &&
           ruleSet
             .getRouteOriginDestinations()
             .toString()
             .indexOf(routeOriginDestination.toString()) !=
-          -1
-        ) {
-          isSpecialRoute = true;
-        }
+            -1;
+
         if (
           isSpecialRoute ||
           (ruleSet.getRoutes().contains(leg.route().getId()) &&

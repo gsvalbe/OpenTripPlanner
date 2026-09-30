@@ -43,6 +43,13 @@ class AreaMatcher {
     return matches(stop, areaId, toAreasWithRules);
   }
 
+  /**
+   * The ids of the areas that the stop belongs to.
+   */
+  Collection<FeedScopedId> areasOf(StopLocation stop) {
+    return stopAreas.get(stop.getId());
+  }
+
   private boolean matches(
     StopLocation stop,
     FeedScopedId areaId,

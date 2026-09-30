@@ -481,6 +481,14 @@ public class OrcaFareService extends DefaultFareService {
    * hour window has expired, the calculated fare for that trip will be two one-way fares instead of
    * one.
    */
+  /**
+   * This service applies custom fare logic which is not expressed in terms of fare zones alone.
+   */
+  @Override
+  protected boolean legFaresDependOnlyOnStops() {
+    return false;
+  }
+
   @Override
   public ItineraryFare calculateFaresForType(
     Currency currency,

@@ -176,28 +176,22 @@ public class AtlantaFareService extends DefaultFareService {
     return calculateCost(fareType, Lists.newArrayList(leg), fareRules).orElse(Money.ZERO_USD);
   }
 
-  private static class TransferMeta {
-
-    public final TransferType type;
-    public final Money upcharge;
-    public final boolean payOnExit;
+  private record TransferMeta(TransferType type, Money upcharge, boolean payOnExit) {
 
     /**
      * Create a TransferMeta
-     * @param type Type of transfer
-     * @param upcharge Upcharge for the transfer in cents
+     *
+     * @param type      Type of transfer
+     * @param upcharge  Upcharge for the transfer in cents
      * @param payOnExit Whether the fare is charged at end of leg
      */
-    public TransferMeta(TransferType type, Money upcharge, boolean payOnExit) {
-      this.type = type;
-      this.upcharge = upcharge;
-      this.payOnExit = payOnExit;
+    private TransferMeta {
     }
 
-    public TransferMeta(TransferType type) {
-      this(type, Money.ZERO_USD, false);
+      public TransferMeta(TransferType type) {
+        this(type, ZERO_USD, false);
+      }
     }
-  }
 
   private static RideType classify(Leg ride) {
     Route getRoute = ride.route();
@@ -386,6 +380,14 @@ public class AtlantaFareService extends DefaultFareService {
    * fare engine, however here we want to explicitly compute fares across feed boundaries.
    */
   @Nullable
+  /**
+   * This service applies custom fare logic which is not expressed in terms of fare zones alone.
+   */
+  @Override
+  protected boolean legFaresDependOnlyOnStops() {
+    return false;
+  }
+
   @Override
   protected Collection<FareRuleSet> fareRulesForFeed(FareType fareType, String feedId) {
     return fareRulesPerType.get(fareType);

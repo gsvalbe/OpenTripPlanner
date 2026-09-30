@@ -11,8 +11,12 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.locationtech.jts.geom.Geometry;
@@ -39,6 +43,7 @@ import org.opentripplanner.model.plan.leg.ScheduledTransitLegBuilder;
 import org.opentripplanner.routing.alertpatch.EntitySelector;
 import org.opentripplanner.routing.alertpatch.TransitAlert;
 import org.opentripplanner.routing.fares.FareService;
+import org.opentripplanner.routing.fares.StopFareIdentity;
 import org.opentripplanner.routing.services.TransitAlertService;
 import org.opentripplanner.service.realtimevehicles.RealtimeVehicleService;
 import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
@@ -275,11 +280,7 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
         if (fromPos < 0 || fromPos >= numStops - 1) {
           return List.of();
         }
-        List<TripFare> fares = new ArrayList<>();
-        for (int toPos = fromPos + 1; toPos < numStops; toPos++) {
-          fares.add(computeTripFare(environment, context, fromPos, toPos));
-        }
-        return fares;
+        return computeTripFares(environment, context, fromPos);
       } catch (ParseException e) {
         // invalid date format
         return List.of();
@@ -499,8 +500,53 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
   }
 
   /**
-   * Computes the fare for travelling on this trip between two stop positions by building a
-   * synthetic single-leg itinerary and running it through the configured {@link FareService}.
+   * Computes the fares from a stop position to every later stop of this trip.
+   * <p>
+   * Fares are usually determined by the fare zones of the stops rather than by the stops
+   * themselves, and a trip commonly stays within a single zone. Therefore the fare is computed only
+   * once per distinct combination of alighting stop identity and set of identities visited on the
+   * way, and shared by all stop pairs that have the same combination. If the fare service cannot
+   * express its fares in terms of stops alone the fares are computed for each stop pair
+   * individually.
+   */
+  private List<TripFare> computeTripFares(
+    DataFetchingEnvironment environment,
+    TripFareContext context,
+    int fromPos
+  ) {
+    var stops = context.tripPattern().getStops();
+    int numStops = context.tripTimes().getNumStops();
+    FareService fareService = getFareService(environment);
+    StopFareIdentity[] identities = stopFareIdentities(fareService, stops, fromPos, numStops);
+
+    Map<FareCacheKey, List<FareOffer>> cache = identities == null ? null : new HashMap<>();
+    Set<StopFareIdentity> visited = identities == null ? null : new HashSet<>();
+    int visitedVersion = 0;
+    if (identities != null) {
+      visited.add(identities[fromPos]);
+    }
+
+    List<TripFare> fares = new ArrayList<>(numStops - fromPos - 1);
+    for (int toPos = fromPos + 1; toPos < numStops; toPos++) {
+      final int alightPos = toPos;
+      List<FareOffer> offers;
+      if (identities == null) {
+        offers = computeFareOffers(fareService, context, fromPos, alightPos);
+      } else {
+        if (visited.add(identities[alightPos])) {
+          visitedVersion++;
+        }
+        offers = cache.computeIfAbsent(new FareCacheKey(identities[alightPos], visitedVersion), _ ->
+          computeFareOffers(fareService, context, fromPos, alightPos)
+        );
+      }
+      fares.add(new TripFare(stops.get(fromPos), stops.get(alightPos), offers));
+    }
+    return fares;
+  }
+
+  /**
+   * Computes the fare for travelling on this trip between two stop positions.
    */
   private TripFare computeTripFare(
     DataFetchingEnvironment environment,
@@ -508,6 +554,24 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
     int fromPos,
     int toPos
   ) {
+    var stops = context.tripPattern().getStops();
+    var offers = computeFareOffers(getFareService(environment), context, fromPos, toPos);
+    return new TripFare(stops.get(fromPos), stops.get(toPos), offers);
+  }
+
+  /**
+   * Computes the fare offers for travelling on this trip between two stop positions by building a
+   * synthetic single-leg itinerary and running it through the configured {@link FareService}.
+   */
+  private List<FareOffer> computeFareOffers(
+    @Nullable FareService fareService,
+    TripFareContext context,
+    int fromPos,
+    int toPos
+  ) {
+    if (fareService == null) {
+      return List.of();
+    }
     var startOfService = ServiceDateUtils.asStartOfService(context.serviceDate(), context.zoneId());
     ZonedDateTime startTime = startOfService.plusSeconds(
       context.tripTimes().getDepartureTime(fromPos)
@@ -529,18 +593,37 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
       .withGeneralizedCost(Cost.ZERO)
       .build();
 
-    List<FareOffer> fareProducts = List.of();
-    FareService fareService = getFareService(environment);
-    if (fareService != null) {
-      ItineraryFare fare = fareService.calculateFares(itinerary);
-      if (fare != null) {
-        var decorated = ItineraryFaresDecorator.decorateItineraryWithFare(itinerary, fare);
-        fareProducts = decorated.listTransitLegs().getFirst().fareOffers();
-      }
+    ItineraryFare fare = fareService.calculateFares(itinerary);
+    if (fare == null) {
+      return List.of();
     }
+    var decorated = ItineraryFaresDecorator.decorateItineraryWithFare(itinerary, fare);
+    return decorated.listTransitLegs().getFirst().fareOffers();
+  }
 
-    var stops = context.tripPattern().getStops();
-    return new TripFare(stops.get(fromPos), stops.get(toPos), fareProducts);
+  /**
+   * The fare identities of the stops from {@code fromPos} onwards, or {@code null} if the fare
+   * service does not compute its fares from the stops of a leg alone.
+   */
+  @Nullable
+  private static StopFareIdentity[] stopFareIdentities(
+    @Nullable FareService fareService,
+    List<StopLocation> stops,
+    int fromPos,
+    int numStops
+  ) {
+    if (fareService == null) {
+      return null;
+    }
+    var identities = new StopFareIdentity[numStops];
+    for (int pos = fromPos; pos < numStops; pos++) {
+      var identity = fareService.fareIdentity(stops.get(pos));
+      if (identity.isEmpty()) {
+        return null;
+      }
+      identities[pos] = identity.get();
+    }
+    return identities;
   }
 
   private record TripFareContext(
@@ -549,6 +632,13 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
     LocalDate serviceDate,
     ZoneId zoneId
   ) {}
+
+  /**
+   * Identifies the fare of a leg which starts at a fixed stop: the identity of the alighting stop
+   * plus the number of times the set of identities visited so far has grown. Since that set only
+   * ever grows, the counter identifies its contents.
+   */
+  private record FareCacheKey(StopFareIdentity alightStop, int visitedVersion) {}
 
   private List<Object> getStops(DataFetchingEnvironment environment) {
     TripPattern tripPattern = getTripPattern(environment);

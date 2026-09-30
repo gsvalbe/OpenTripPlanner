@@ -48,6 +48,14 @@ public class HighestFareInFreeTransferWindowFareService extends DefaultFareServi
    * highest cost within the free transfer window and then reset to a new window and calculate
    * additional free transfers from there.
    */
+  /**
+   * This service applies custom fare logic which is not expressed in terms of fare zones alone.
+   */
+  @Override
+  protected boolean legFaresDependOnlyOnStops() {
+    return false;
+  }
+
   @Override
   protected ItineraryFare calculateFaresForType(
     Currency currency,

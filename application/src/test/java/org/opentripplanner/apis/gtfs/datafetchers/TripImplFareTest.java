@@ -6,18 +6,25 @@ import static org.opentripplanner.ext.fares.model.FareModelForTest.AIRPORT_TO_CI
 import static org.opentripplanner.ext.fares.model.FareModelForTest.INSIDE_CITY_CENTER_SET;
 import static org.opentripplanner.transit.model._data.TimetableRepositoryForTest.id;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.apis.gtfs.model.TripFare;
 import org.opentripplanner.core.model.i18n.I18NString;
+import org.opentripplanner.ext.fares.model.FareAttribute;
+import org.opentripplanner.ext.fares.model.FareRuleSet;
 import org.opentripplanner.ext.fares.service.gtfs.v1.DefaultFareService;
 import org.opentripplanner.model.StopTime;
 import org.opentripplanner.model.fare.FareOffer;
 import org.opentripplanner.model.fare.FareProduct;
+import org.opentripplanner.model.fare.ItineraryFare;
+import org.opentripplanner.model.plan.Itinerary;
 import org.opentripplanner.routing.core.FareType;
 import org.opentripplanner.routing.fares.FareService;
+import org.opentripplanner.routing.fares.StopFareIdentity;
 import org.opentripplanner.street.geometry.WgsCoordinate;
 import org.opentripplanner.transit.model._data.TimetableRepositoryForTest;
 import org.opentripplanner.transit.model.basic.Money;
@@ -111,12 +118,41 @@ class TripImplFareTest {
     assertThat(faresFrom(2)).isEmpty();
   }
 
+  @Test
+  void stopsInTheSameZoneShareASingleComputation() throws Exception {
+    var countingService = new CountingFareService(buildFareService());
+
+    // Both city center stops are in the same zone, so a single fare covers both stop pairs.
+    var fares = faresFrom(0, countingService);
+
+    assertThat(fares).hasSize(2);
+    fares.forEach(fare -> assertThat(prices(fare)).containsExactly(TEN_DOLLARS));
+    assertThat(countingService.calls).isEqualTo(1);
+  }
+
+  @Test
+  void journeyDurationRulesArePerStopPair() throws Exception {
+    // The fare is only valid for seven minutes, which rules out the ride to the last stop.
+    var countingService = new CountingFareService(buildFareService(Duration.ofMinutes(7)));
+
+    var fares = faresFrom(0, countingService);
+
+    assertThat(fares).hasSize(2);
+    assertThat(prices(fares.get(0))).containsExactly(TEN_DOLLARS);
+    assertThat(prices(fares.get(1))).isEmpty();
+    assertThat(countingService.calls).isEqualTo(2);
+  }
+
   private List<TripFare> faresFrom(int fromStopPosition) throws Exception {
+    return faresFrom(fromStopPosition, FARE_SERVICE);
+  }
+
+  private List<TripFare> faresFrom(int fromStopPosition, FareService fareService) throws Exception {
     var env = dataFetchingEnvironment(
       TRIP,
       Map.of("fromStopPosition", fromStopPosition),
       TRANSIT_SERVICE,
-      FARE_SERVICE
+      fareService
     );
     var result = IMPL.faresFrom().get(env);
     return StreamSupport.stream(result.spliterator(), false).toList();
@@ -172,6 +208,48 @@ class TripImplFareTest {
       List.of(AIRPORT_TO_CITY_CENTER_SET, INSIDE_CITY_CENTER_SET)
     );
     return service;
+  }
+
+  /**
+   * A fare service whose fares are only valid for the given journey duration, which makes them
+   * depend on the alighting time rather than on the fare zones alone.
+   */
+  private static FareService buildFareService(Duration journeyDuration) {
+    var attribute = FareAttribute.of(id("timed-airport-to-city-center"))
+      .withPrice(TEN_DOLLARS)
+      .withTransfers(0)
+      .withJourneyDuration((int) journeyDuration.toSeconds())
+      .build();
+    var ruleSet = new FareRuleSet(attribute);
+    ruleSet.addOriginDestination(AIRPORT_ZONE.getId().getId(), CITY_CENTER_ZONE.getId().getId());
+
+    var service = new DefaultFareService();
+    service.addFareRules(FareType.regular, List.of(ruleSet));
+    return service;
+  }
+
+  /**
+   * Counts how often the fares of a leg are actually computed.
+   */
+  private static class CountingFareService implements FareService {
+
+    private final FareService delegate;
+    private int calls = 0;
+
+    CountingFareService(FareService delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public ItineraryFare calculateFares(Itinerary itinerary) {
+      calls++;
+      return delegate.calculateFares(itinerary);
+    }
+
+    @Override
+    public Optional<StopFareIdentity> fareIdentity(StopLocation stop) {
+      return delegate.fareIdentity(stop);
+    }
   }
 
   private static StopTime stopTime(int seq, StopLocation stop, String time) {

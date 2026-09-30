@@ -2,6 +2,7 @@ package org.opentripplanner.ext.fares.service.gtfs;
 
 import com.google.common.collect.Multimap;
 import java.util.Objects;
+import java.util.Optional;
 import org.opentripplanner.ext.fares.service.gtfs.v1.DefaultFareService;
 import org.opentripplanner.ext.fares.service.gtfs.v2.GtfsFaresV2Service;
 import org.opentripplanner.model.fare.FareOffer;
@@ -9,6 +10,8 @@ import org.opentripplanner.model.fare.ItineraryFare;
 import org.opentripplanner.model.plan.Itinerary;
 import org.opentripplanner.model.plan.Leg;
 import org.opentripplanner.routing.fares.FareService;
+import org.opentripplanner.routing.fares.StopFareIdentity;
+import org.opentripplanner.transit.model.site.StopLocation;
 
 public final class GtfsFaresService implements FareService {
 
@@ -33,6 +36,12 @@ public final class GtfsFaresService implements FareService {
       }
     }
     return fare;
+  }
+
+  @Override
+  public Optional<StopFareIdentity> fareIdentity(StopLocation stop) {
+    // calculateFares() uses either the V2 or the V1 rules, never both
+    return faresV2.isEmpty() ? faresV1.fareIdentity(stop) : faresV2.fareIdentity(stop);
   }
 
   /**

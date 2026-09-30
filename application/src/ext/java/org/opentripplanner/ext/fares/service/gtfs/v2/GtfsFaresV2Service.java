@@ -4,6 +4,7 @@ import com.google.common.collect.Multimap;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.opentripplanner.core.model.id.FeedScopedId;
@@ -11,6 +12,8 @@ import org.opentripplanner.ext.fares.model.FareLegRule;
 import org.opentripplanner.ext.fares.model.FareTransferRule;
 import org.opentripplanner.model.fare.FareOffer;
 import org.opentripplanner.model.plan.Itinerary;
+import org.opentripplanner.routing.fares.StopFareIdentity;
+import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.utils.collection.ListUtils;
 
 /**
@@ -93,5 +96,12 @@ public final class GtfsFaresV2Service implements Serializable {
    */
   public boolean isEmpty() {
     return lookup.isEmpty();
+  }
+
+  /**
+   * @see org.opentripplanner.routing.fares.FareService#fareIdentity(StopLocation)
+   */
+  public Optional<StopFareIdentity> fareIdentity(StopLocation stop) {
+    return lookup.fareIdentity(stop);
   }
 }

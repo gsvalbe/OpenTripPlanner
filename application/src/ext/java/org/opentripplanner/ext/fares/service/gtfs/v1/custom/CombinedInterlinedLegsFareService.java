@@ -21,6 +21,14 @@ public class CombinedInterlinedLegsFareService extends DefaultFareService {
     return mode;
   }
 
+  /**
+   * This service applies custom fare logic which is not expressed in terms of fare zones alone.
+   */
+  @Override
+  protected boolean legFaresDependOnlyOnStops() {
+    return false;
+  }
+
   @Override
   protected boolean shouldCombineInterlinedLegs(
     ScheduledTransitLeg previousLeg,
