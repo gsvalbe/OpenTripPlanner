@@ -7,6 +7,7 @@ import org.opentripplanner.datastore.api.DataSource;
 import org.opentripplanner.ext.carpooling.CarpoolingRepository;
 import org.opentripplanner.ext.emission.EmissionRepository;
 import org.opentripplanner.ext.empiricaldelay.EmpiricalDelayRepository;
+import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationRepository;
 import org.opentripplanner.framework.application.LogMDCSupport;
 import org.opentripplanner.framework.application.OTPFeature;
@@ -95,6 +96,7 @@ public class ConstructApplication {
     @Nullable EmpiricalDelayRepository empiricalDelayRepository,
     VehicleParkingRepository vehicleParkingRepository,
     @Nullable StopConsolidationRepository stopConsolidationRepository,
+    GeneralPatternRepository generalPatternRepository,
     StreetRepository streetRepository,
     FareServiceFactory fareServiceFactory
   ) {
@@ -120,6 +122,7 @@ public class ConstructApplication {
       .empiricalDelayRepository(empiricalDelayRepository)
       .dataImportIssueSummary(issueSummary)
       .stopConsolidationRepository(stopConsolidationRepository)
+      .generalPatternRepository(generalPatternRepository)
       .streetStreetRepository(streetRepository)
       .schema(config.routerConfig().routingRequestDefaults())
       .fareServiceFactory(fareServiceFactory)
@@ -162,6 +165,7 @@ public class ConstructApplication {
       factory.emissionRepository(),
       factory.empiricalDelayRepository(),
       factory.stopConsolidationRepository(),
+      factory.generalPatternRepository(),
       cli.doLoadStreetGraph(),
       cli.doSaveStreetGraph()
     );
@@ -302,6 +306,10 @@ public class ConstructApplication {
 
   public StopConsolidationRepository stopConsolidationRepository() {
     return factory.stopConsolidationRepository();
+  }
+
+  public GeneralPatternRepository generalPatternRepository() {
+    return factory.generalPatternRepository();
   }
 
   public StreetRepository streetRepository() {

@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 import org.opentripplanner.datastore.api.DataSource;
 import org.opentripplanner.ext.emission.EmissionRepository;
 import org.opentripplanner.ext.empiricaldelay.EmpiricalDelayRepository;
+import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationRepository;
 import org.opentripplanner.graph_builder.GraphBuilderDataSources;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueSummary;
@@ -72,6 +73,7 @@ public class LoadApplication {
       obj.emissionRepository,
       obj.empiricalDelayRepository,
       obj.stopConsolidationRepository,
+      obj.generalPatternRepository,
       obj.streetRepository,
       obj.fareServiceFactory
     );
@@ -91,6 +93,7 @@ public class LoadApplication {
       factory.emptyEmissionsDataModel(),
       factory.emptyEmpiricalDelayRepository(),
       factory.emptyStopConsolidationRepository(),
+      factory.emptyGeneralPatternRepository(),
       factory.emptyStreetRepository(),
       factory.emptyFareServiceFactory()
     );
@@ -119,6 +122,7 @@ public class LoadApplication {
     @Nullable EmissionRepository emissionRepository,
     @Nullable EmpiricalDelayRepository empiricalDelayRepository,
     @Nullable StopConsolidationRepository stopConsolidationRepository,
+    GeneralPatternRepository generalPatternRepository,
     StreetRepository streetRepository,
     FareServiceFactory fareServiceFactory
   ) {
@@ -137,6 +141,7 @@ public class LoadApplication {
       empiricalDelayRepository,
       parkingRepository,
       stopConsolidationRepository,
+      generalPatternRepository,
       streetRepository,
       fareServiceFactory
     );

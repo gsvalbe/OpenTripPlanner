@@ -133,6 +133,11 @@ public enum OTPFeature {
   DebugRasterTiles(false, true, "Enable debug raster tile API."),
   FaresV2(false, true, "Enable import of GTFS-Fares v2 data."),
   FlexRouting(false, true, "Enable FLEX routing."),
+  GeneralPatterns(
+    false,
+    true,
+    "Build general patterns: one readable stop sequence per route direction, merging trip patterns that differ only by platform, skipped stops or short turns."
+  ),
   GoogleCloudStorage(false, true, "Enable Google Cloud Storage integration."),
   MultiCriteriaGroupMaxFilter(
     false,

@@ -58,6 +58,17 @@ Sections follow that describe particular settings in more depth.
 | [emission](sandbox/Emission.md)                                                             |       `object`       | Emissions configuration.                                                                                                                                       | *Optional* |                                   |  2.5  |
 | empiricalDelay                                                                              |       `object`       | Empirical delay configuration.                                                                                                                                 | *Optional* |                                   |  2.9  |
 | [fares](sandbox/Fares.md)                                                                   |       `object`       | Fare configuration.                                                                                                                                            | *Optional* |                                   |  2.0  |
+| [generalPatterns](#generalPatterns)                                                         |       `object`       | Configure how general patterns are built.                                                                                                                      | *Optional* |                                   |  2.9  |
+|    corridorBuffer                                                                           |       `double`       | Distance, in meters, used to test whether two variants run along the same corridor.                                                                            | *Optional* | `1000.0`                          |  2.9  |
+|    [corridorMinOverlap](#generalPatterns_corridorMinOverlap)                                |       `double`       | Share of a variant's shape that must lie within `corridorBuffer` of the other variant.                                                                         | *Optional* | `0.85`                            |  2.9  |
+|    minSharedStations                                                                        |       `integer`      | Minimum number of shared stations for a pattern to join a general pattern.                                                                                     | *Optional* | `2`                               |  2.9  |
+|    railSkipRadius                                                                           |       `double`       | Same as `skipRadius`, used for rail.                                                                                                                           | *Optional* | `250.0`                           |  2.9  |
+|    [skipRadius](#generalPatterns_skipRadius)                                                |       `double`       | Maximum distance, in meters, from a variant's shape for an unserved stop to count as passed.                                                                   | *Optional* | `400.0`                           |  2.9  |
+|    stationFallbackRadius                                                                    |       `double`       | Stops without a parent station are merged when they have the same name and lie within this distance, in meters.                                                | *Optional* | `400.0`                           |  2.9  |
+|    [excludeAgencies](#generalPatterns_excludeAgencies)                                      |      `string[]`      | Skip routes of these agencies, given as `feedId:agencyId`.                                                                                                     | *Optional* |                                   |  2.9  |
+|    [excludeFeeds](#generalPatterns_excludeFeeds)                                            |      `string[]`      | Skip routes from these feed ids.                                                                                                                               | *Optional* |                                   |  2.9  |
+|    [excludeModes](#generalPatterns_excludeModes)                                            |      `enum set`      | Skip routes with these transit modes.                                                                                                                          | *Optional* |                                   |  2.9  |
+|    [excludeRegions](#generalPatterns_excludeRegions)                                        |      `string[]`      | Skip routes whose `region_name` is in this list.                                                                                                               | *Optional* |                                   |  2.9  |
 | gsConfig                                                                                    |       `object`       | Configuration for Google Cloud Storage                                                                                                                         | *Optional* |                                   |  2.8  |
 | gtfsDefaults                                                                                |       `object`       | The gtfsDefaults section allows you to specify default properties for GTFS files.                                                                              | *Optional* |                                   |  2.3  |
 |    blockBasedInterlining                                                                    |       `boolean`      | Whether to create stay-seated transfers in between two trips with the same block id.                                                                           | *Optional* | `true`                            |  2.3  |
@@ -717,6 +728,71 @@ for the next graph build operation. You should add the `--cache <directory>` com
 to specify your NED tile cache location.
 
 
+<h3 id="generalPatterns">generalPatterns</h3>
+
+**Since version:** `2.9` ∙ **Type:** `object` ∙ **Cardinality:** `Optional`   
+**Path:** / 
+
+Configure how general patterns are built.
+
+A general pattern merges the trip patterns of a route that differ only by platform,
+skipped stops, short turns or small detours into one readable stop sequence. They are
+built only when the `GeneralPatterns` feature is enabled.
+
+
+<h3 id="generalPatterns_corridorMinOverlap">corridorMinOverlap</h3>
+
+**Since version:** `2.9` ∙ **Type:** `double` ∙ **Cardinality:** `Optional` ∙ **Default value:** `0.85`   
+**Path:** /generalPatterns 
+
+Share of a variant's shape that must lie within `corridorBuffer` of the other variant.
+
+Only used when the stop order of the merged variants is ambiguous. A lower value merges
+more variants; a higher value keeps branches and different roads apart.
+
+
+<h3 id="generalPatterns_skipRadius">skipRadius</h3>
+
+**Since version:** `2.9` ∙ **Type:** `double` ∙ **Cardinality:** `Optional` ∙ **Default value:** `400.0`   
+**Path:** /generalPatterns 
+
+Maximum distance, in meters, from a variant's shape for an unserved stop to count as passed.
+
+A stop the variant does not serve, but passes within this distance of, is marked as
+skipped. A stop further away is a detour that the variant does not take.
+
+
+<h3 id="generalPatterns_excludeAgencies">excludeAgencies</h3>
+
+**Since version:** `2.9` ∙ **Type:** `string[]` ∙ **Cardinality:** `Optional`   
+**Path:** /generalPatterns 
+
+Skip routes of these agencies, given as `feedId:agencyId`.
+
+<h3 id="generalPatterns_excludeFeeds">excludeFeeds</h3>
+
+**Since version:** `2.9` ∙ **Type:** `string[]` ∙ **Cardinality:** `Optional`   
+**Path:** /generalPatterns 
+
+Skip routes from these feed ids.
+
+<h3 id="generalPatterns_excludeModes">excludeModes</h3>
+
+**Since version:** `2.9` ∙ **Type:** `enum set` ∙ **Cardinality:** `Optional`   
+**Path:** /generalPatterns   
+**Enum values:** `rail` | `coach` | `subway` | `bus` | `tram` | `ferry` | `airplane` | `cable-car` | `gondola` | `funicular` | `trolleybus` | `monorail` | `carpool` | `taxi` | `snow-and-ice`
+
+Skip routes with these transit modes.
+
+<h3 id="generalPatterns_excludeRegions">excludeRegions</h3>
+
+**Since version:** `2.9` ∙ **Type:** `string[]` ∙ **Cardinality:** `Optional`   
+**Path:** /generalPatterns 
+
+Skip routes whose `region_name` is in this list.
+
+Use this for large city networks, where the regular trip patterns are already readable.
+
 <h3 id="gd_discardMinTransferTimes">discardMinTransferTimes</h3>
 
 **Since version:** `2.3` ∙ **Type:** `boolean` ∙ **Cardinality:** `Optional` ∙ **Default value:** `false`   
@@ -1334,6 +1410,20 @@ the centroid.
     }
   ],
   "stopConsolidationFile" : "consolidated-stops.csv",
+  "generalPatterns" : {
+    "excludeRegions" : [
+      "Rīga",
+      "Vilnius",
+      "Tallinna linn",
+      "Kaunas"
+    ],
+    "excludeModes" : [
+      "FERRY"
+    ],
+    "stationFallbackRadius" : 400,
+    "corridorMinOverlap" : 0.85,
+    "railSkipRadius" : 250
+  },
   "transferParametersForMode" : {
     "CAR" : {
       "disableDefaultTransfers" : true,

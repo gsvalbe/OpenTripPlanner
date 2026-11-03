@@ -34,6 +34,7 @@ import org.opentripplanner.ext.empiricaldelay.model.EmpiricalDelay;
 import org.opentripplanner.ext.empiricaldelay.model.TripDelays;
 import org.opentripplanner.ext.empiricaldelay.model.calendar.EmpiricalDelayCalendar;
 import org.opentripplanner.ext.fares.service.gtfs.v1.DefaultFareServiceFactory;
+import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternRepository;
 import org.opentripplanner.framework.model.Gram;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueSummary;
 import org.opentripplanner.model.plan.Emission;
@@ -272,6 +273,7 @@ public class GraphSerializationTest {
       emissionRepository,
       empiricalDelayRepository,
       null,
+      new DefaultGeneralPatternRepository(),
       new DefaultFareServiceFactory()
     );
     serializedObj.save(new FileDataSource(tempFile, FileType.GRAPH));

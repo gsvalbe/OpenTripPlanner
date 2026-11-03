@@ -14,6 +14,7 @@ import javax.annotation.Nullable;
 import org.opentripplanner.core.framework.deduplicator.DeduplicatorService;
 import org.opentripplanner.ext.emission.EmissionRepository;
 import org.opentripplanner.ext.empiricaldelay.EmpiricalDelayRepository;
+import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationRepository;
 import org.opentripplanner.framework.application.OTPFeature;
 import org.opentripplanner.framework.application.OtpAppException;
@@ -87,6 +88,7 @@ public class GraphBuilder implements Runnable {
     @Nullable EmissionRepository emissionRepository,
     @Nullable EmpiricalDelayRepository empiricalDelayRepository,
     @Nullable StopConsolidationRepository stopConsolidationRepository,
+    GeneralPatternRepository generalPatternRepository,
     boolean loadStreetGraph,
     boolean saveStreetGraph
   ) {
@@ -111,6 +113,7 @@ public class GraphBuilder implements Runnable {
       .stopConsolidationRepository(stopConsolidationRepository)
       .emissionRepository(emissionRepository)
       .empiricalDelayRepository(empiricalDelayRepository)
+      .generalPatternRepository(generalPatternRepository)
       .fareServiceFactory(fareServiceFactory)
       .dataSources(dataSources)
       .timeZoneId(timetableRepository.getTimeZone());
@@ -137,6 +140,11 @@ public class GraphBuilder implements Runnable {
     if (hasTransitData) {
       graphBuilder.addModuleOptional(factory.stopConsolidationModule());
       graphBuilder.addModule(factory.tripPatternNamer());
+      // General patterns need the final trip patterns, so they are built right after naming them
+      graphBuilder.addModuleOptional(
+        factory.generalPatternGraphBuilder(),
+        OTPFeature.GeneralPatterns
+      );
       graphBuilder.addModuleOptional(
         factory.timeZoneAdjusterModule(),
         timetableRepository.getAgencyTimeZones().size() > 1

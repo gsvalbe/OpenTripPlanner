@@ -130,6 +130,7 @@ nav:
     - Ride Hailing: 'sandbox/RideHailing.md'
     - Emissions: 'sandbox/Emission.md'
     - Empirical Delay: 'sandbox/EmpiricalDelay.md'
+    - General Patterns: 'sandbox/GeneralPatterns.md'
     - Stop Consolidation: 'sandbox/StopConsolidation.md'
     - Sørlandsbanen: 'sandbox/Sorlandsbanen.md'
     - TRIAS API: 'sandbox/TriasApi.md'

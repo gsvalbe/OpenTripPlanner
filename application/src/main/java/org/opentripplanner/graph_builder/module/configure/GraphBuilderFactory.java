@@ -16,6 +16,9 @@ import org.opentripplanner.ext.empiricaldelay.EmpiricalDelayRepository;
 import org.opentripplanner.ext.empiricaldelay.configure.EmpiricalDelayGraphBuilderModule;
 import org.opentripplanner.ext.empiricaldelay.internal.graphbuilder.EmpiricalDelayGraphBuilder;
 import org.opentripplanner.ext.flex.AreaStopsToVerticesMapper;
+import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
+import org.opentripplanner.ext.generalpattern.configure.GeneralPatternGraphBuilderModule;
+import org.opentripplanner.ext.generalpattern.internal.build.GeneralPatternGraphBuilder;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationModule;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationRepository;
 import org.opentripplanner.ext.transferanalyzer.DirectTransferAnalyzer;
@@ -59,6 +62,7 @@ import org.opentripplanner.transit.service.TimetableRepository;
     EdgeNamerModule.class,
     EmissionGraphBuilderModule.class,
     EmpiricalDelayGraphBuilderModule.class,
+    GeneralPatternGraphBuilderModule.class,
     GraphBuilderModule.class,
     GraphBuilderModules.class,
     OsmInfoGraphBuildServiceModule.class,
@@ -94,6 +98,8 @@ public interface GraphBuilderFactory {
 
   @Nullable
   EmpiricalDelayGraphBuilder empiricalDelayGraphBuilder();
+
+  GeneralPatternGraphBuilder generalPatternGraphBuilder();
 
   @Nullable
   RouteToCentroidStationIdsValidator routeToCentroidStationIdValidator();
@@ -155,5 +161,8 @@ public interface GraphBuilderFactory {
 
     @BindsInstance
     Builder empiricalDelayRepository(@Nullable EmpiricalDelayRepository empiricalDelayRepository);
+
+    @BindsInstance
+    Builder generalPatternRepository(GeneralPatternRepository generalPatternRepository);
   }
 }

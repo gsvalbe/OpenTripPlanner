@@ -18,6 +18,7 @@ import org.opentripplanner.ext.emission.EmissionRepository;
 import org.opentripplanner.ext.emission.configure.EmissionServiceModule;
 import org.opentripplanner.ext.empiricaldelay.EmpiricalDelayRepository;
 import org.opentripplanner.ext.empiricaldelay.configure.EmpiricalDelayServiceModule;
+import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
 import org.opentripplanner.ext.geocoder.LuceneIndex;
 import org.opentripplanner.ext.geocoder.configure.GeocoderModule;
 import org.opentripplanner.ext.interactivelauncher.configuration.InteractiveLauncherModule;
@@ -150,6 +151,8 @@ public interface ConstructApplicationFactory {
   @Nullable
   StopConsolidationRepository stopConsolidationRepository();
 
+  GeneralPatternRepository generalPatternRepository();
+
   StreetRepository streetRepository();
 
   @Nullable
@@ -194,6 +197,9 @@ public interface ConstructApplicationFactory {
     Builder stopConsolidationRepository(
       @Nullable StopConsolidationRepository stopConsolidationRepository
     );
+
+    @BindsInstance
+    Builder generalPatternRepository(GeneralPatternRepository generalPatternRepository);
 
     @BindsInstance
     Builder vehicleParkingRepository(VehicleParkingRepository parkingRepository);
