@@ -18,7 +18,7 @@ import org.opentripplanner.ext.empiricaldelay.internal.graphbuilder.EmpiricalDel
 import org.opentripplanner.ext.flex.AreaStopsToVerticesMapper;
 import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
 import org.opentripplanner.ext.generalpattern.configure.GeneralPatternGraphBuilderModule;
-import org.opentripplanner.ext.generalpattern.internal.build.GeneralPatternGraphBuilder;
+import org.opentripplanner.ext.generalpattern.internal.graphbuilder.GeneralPatternGraphBuilder;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationModule;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationRepository;
 import org.opentripplanner.ext.transferanalyzer.DirectTransferAnalyzer;

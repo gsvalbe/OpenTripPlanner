@@ -20,6 +20,7 @@ import org.opentripplanner.ext.emission.configure.EmissionServiceModule;
 import org.opentripplanner.ext.empiricaldelay.EmpiricalDelayRepository;
 import org.opentripplanner.ext.empiricaldelay.configure.EmpiricalDelayServiceModule;
 import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
+import org.opentripplanner.ext.generalpattern.configure.GeneralPatternServiceModule;
 import org.opentripplanner.ext.geocoder.LuceneIndex;
 import org.opentripplanner.ext.geocoder.configure.GeocoderModule;
 import org.opentripplanner.ext.interactivelauncher.configuration.InteractiveLauncherModule;
@@ -104,6 +105,7 @@ import org.opentripplanner.warmup.configure.WarmupModule;
     TransmodelSchemaModule.class,
     SorlandsbanenNorwayModule.class,
     StopConsolidationServiceModule.class,
+    GeneralPatternServiceModule.class,
     StreetLimitationParametersServiceModule.class,
     TransitModule.class,
     TransitAlertServiceModule.class,

@@ -19,8 +19,7 @@ termini, without any clustering or geometry code of their own.
 General patterns describe the planned timetable. They are built once during graph build and are
 not changed by real-time updates. Routing is not affected.
 
-This first version builds and stores the general patterns and logs a summary per mode. It does not
-yet expose them in an API.
+The general patterns are available in the [GTFS GraphQL API](#gtfs-graphql-api).
 
 ## How general patterns are built
 
@@ -64,6 +63,35 @@ The `generalPatterns` block in `build-config.json` is optional. All parameters a
 `excludeRegions` uses the `region_name` column of `routes.txt`. Use `excludeFeeds`,
 `excludeAgencies` or `excludeModes` for feeds without that column.
 
+## GTFS GraphQL API
+
+| Field | Returns |
+| --- | --- |
+| `Route.generalPatterns` | The route's general patterns, most trips first |
+| `Pattern.generalPattern` | The general pattern a pattern is merged into |
+| `generalPattern(id)` on the query root | One general pattern by id |
+
+```graphql
+{
+  route(id: "pv:pv-ev-skul") {
+    generalPatterns {
+      gtfsId
+      stops {
+        stop { name }
+        status          # ALWAYS, SOMETIMES_SKIPPED or DETOUR
+        lineTerminus
+        tripsStartHere
+        tripsEndHere
+      }
+    }
+  }
+}
+```
+
+Each stop is at station level: `stop` is a stop the route uses there, `station` its parent station
+and `mergedStops` all the stops merged into it, such as the platforms of a station.
+
 ## Changelog
 
 - Initial version: build general patterns during graph build and store them in the graph.
+- Expose general patterns in the GTFS GraphQL API.

@@ -49,6 +49,8 @@ import org.opentripplanner.core.model.i18n.NonLocalizedString;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.core.model.id.FeedScopedIdForTestFactory;
 import org.opentripplanner.core.model.time.TimePeriod;
+import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternRepository;
+import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternService;
 import org.opentripplanner.model.FeedInfoTestFactory;
 import org.opentripplanner.model.StopTime;
 import org.opentripplanner.model.calendar.CalendarServiceData;
@@ -572,7 +574,8 @@ class GraphQLIntegrationTest {
       PLACE_FINDER,
       null,
       routeRequest,
-      null
+      null,
+      new DefaultGeneralPatternService(new DefaultGeneralPatternRepository())
     );
   }
 

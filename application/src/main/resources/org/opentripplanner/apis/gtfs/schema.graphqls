@@ -792,6 +792,43 @@ type FeedPublisher {
   url: String!
 }
 
+"""
+A general pattern is one readable stop sequence for a route and direction. It merges the route's
+patterns that differ only by platform, skipped stops, short turns or small detours, so that riders
+see one line instead of many near-identical patterns.
+
+General patterns describe the planned timetable and are not changed by real-time updates. This is
+a sandbox feature: general patterns exist only when the `GeneralPatterns` feature is enabled.
+"""
+type GeneralPattern {
+  "ID of the general pattern in format `FeedId:GeneralPatternId`"
+  gtfsId: String!
+  "The patterns merged into this general pattern, most trips first"
+  patterns: [Pattern!]!
+  "The route this general pattern belongs to"
+  route: Route!
+  "Stops in travel order, at station level"
+  stops: [GeneralPatternStop!]!
+}
+
+"A stop of a general pattern. Platforms and stops of one station are merged into one."
+type GeneralPatternStop {
+  "Whether this is the first or the last stop of the general pattern"
+  lineTerminus: Boolean!
+  "All stops merged into this general pattern stop, for example the platforms of a station"
+  mergedStops: [Stop!]!
+  "The parent station, if the stops have one"
+  station: Stop
+  "How the trips that reach this stop serve it"
+  status: GeneralPatternStopStatus!
+  "A stop that the route uses here"
+  stop: Stop!
+  "Whether at least one trip ends here. Always true at the last stop."
+  tripsEndHere: Boolean!
+  "Whether at least one trip starts here. Always true at the first stop."
+  tripsStartHere: Boolean!
+}
+
 type Geometry {
   "The number of points in the string"
   length: Int
@@ -1249,6 +1286,11 @@ type Pattern implements Node {
   -1 indicates that the direction is irrelevant, i.e. the route has patterns only in one direction.
   """
   directionId: Int
+  """
+  The general pattern this pattern is merged into. Null for patterns added by real-time updates,
+  or when the `GeneralPatterns` sandbox feature is disabled.
+  """
+  generalPattern: GeneralPattern
   geometry: [Coordinates]
   "Vehicle headsign used by trips of this pattern"
   headsign: String
@@ -1662,6 +1704,8 @@ type QueryType {
     "Departure time of the trip, format: seconds since midnight of the departure date"
     time: Int!
   ): Trip @timingData
+  "Get a general pattern by its ID, in format `FeedId:GeneralPatternId`"
+  generalPattern(id: String!): GeneralPattern @timingData
   """
   Try refetching the current state of a transit leg using its id.
   This fails when the underlying transit data (mostly IDs) has changed or are no longer available.
@@ -2484,6 +2528,11 @@ type Route implements Node {
   """
   color: String
   desc: String
+  """
+  General patterns of this route, most trips first. Empty unless the `GeneralPatterns` sandbox
+  feature is enabled.
+  """
+  generalPatterns: [GeneralPattern!]!
   "ID of the route in format `FeedId:RouteId`"
   gtfsId: String!
   "Global object ID provided by Relay. This value can be used to refetch this object using **node** query."
@@ -3882,6 +3931,20 @@ enum FormFactor {
   SCOOTER_SEATED
   "A kick scooter that the rider stands on"
   SCOOTER_STANDING
+}
+
+"""
+How the trips of a general pattern serve one of its stops. Only trips that reach the stop (it lies
+between their first and last stop) are counted, so a trip ending earlier does not make it less
+than `ALWAYS`.
+"""
+enum GeneralPatternStopStatus {
+  "Every trip that reaches the stop stops there"
+  ALWAYS
+  "Some trips serve the stop through a detour that other trips do not take"
+  DETOUR
+  "Some trips pass the stop without stopping"
+  SOMETIMES_SKIPPED
 }
 
 enum InputField {

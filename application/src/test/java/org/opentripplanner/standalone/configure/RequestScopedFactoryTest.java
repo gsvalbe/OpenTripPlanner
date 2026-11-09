@@ -18,6 +18,9 @@ import org.opentripplanner.ext.dataoverlay.configuration.DataOverlayParameterBin
 import org.opentripplanner.ext.empiricaldelay.EmpiricalDelayService;
 import org.opentripplanner.ext.fares.model.FareRulesData;
 import org.opentripplanner.ext.fares.service.gtfs.v1.DefaultFareService;
+import org.opentripplanner.ext.generalpattern.GeneralPatternService;
+import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternRepository;
+import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternService;
 import org.opentripplanner.ext.geocoder.LuceneIndex;
 import org.opentripplanner.ext.ridehailing.RideHailingService;
 import org.opentripplanner.ext.sorlandsbanen.SorlandsbanenNorwayService;
@@ -145,6 +148,9 @@ class RequestScopedFactoryTest {
       .sorlandsbanenService(null)
       .launcherRequestDecorator(request -> request)
       .luceneIndex(null)
+      .generalPatternService(
+        new DefaultGeneralPatternService(new DefaultGeneralPatternRepository())
+      )
       .fareServiceFactory(
         new FareServiceFactory() {
           @Override
@@ -283,6 +289,9 @@ class RequestScopedFactoryTest {
 
       @BindsInstance
       Builder luceneIndex(@Nullable LuceneIndex luceneIndex);
+
+      @BindsInstance
+      Builder generalPatternService(GeneralPatternService generalPatternService);
 
       @BindsInstance
       Builder fareServiceFactory(FareServiceFactory fareServiceFactory);

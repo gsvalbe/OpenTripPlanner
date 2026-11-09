@@ -76,6 +76,9 @@ config:
     Emissions: org.opentripplanner.model.plan.Emission#Emission
     Feed: String
     FeedPublisher: org.opentripplanner.apis.gtfs.model.FeedPublisher#FeedPublisher
+    GeneralPattern: org.opentripplanner.ext.generalpattern.model.GeneralPattern#GeneralPattern
+    GeneralPatternStop: org.opentripplanner.ext.generalpattern.model.GeneralPatternStop#GeneralPatternStop
+    GeneralPatternStopStatus: org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLGeneralPatternStopStatus#GraphQLGeneralPatternStopStatus
     Geometry: org.locationtech.jts.geom.Geometry#Geometry
     InputField: org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLInputField#GraphQLInputField
     Itinerary: org.opentripplanner.model.plan.Itinerary#Itinerary

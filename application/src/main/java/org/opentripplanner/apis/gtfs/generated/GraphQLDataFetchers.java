@@ -17,6 +17,7 @@ import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLAlertEffectTy
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLAlertSeverityLevelType;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLBikesAllowed;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLCarsAllowed;
+import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLGeneralPatternStopStatus;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLInputField;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLOccupancyStatus;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLPickupDropoffType;
@@ -46,6 +47,8 @@ import org.opentripplanner.apis.gtfs.model.TransferEndpoint;
 import org.opentripplanner.apis.gtfs.model.TripFare;
 import org.opentripplanner.apis.gtfs.model.TripOccupancy;
 import org.opentripplanner.ext.fares.model.FareRuleSet;
+import org.opentripplanner.ext.generalpattern.model.GeneralPattern;
+import org.opentripplanner.ext.generalpattern.model.GeneralPatternStop;
 import org.opentripplanner.ext.ridehailing.model.RideEstimate;
 import org.opentripplanner.framework.graphql.CountedConnection;
 import org.opentripplanner.model.StopTimesInPattern;
@@ -455,6 +458,32 @@ public class GraphQLDataFetchers {
     DataFetcher<String> url();
   }
 
+  /**
+   * A general pattern is one readable stop sequence for a route and direction. It merges the route's
+   * patterns that differ only by platform, skipped stops, short turns or small detours, so that riders
+   * see one line instead of many near-identical patterns.
+   *
+   * General patterns describe the planned timetable and are not changed by real-time updates. This is
+   * a sandbox feature: general patterns exist only when the `GeneralPatterns` feature is enabled.
+   */
+  public interface GraphQLGeneralPattern {
+    DataFetcher<String> gtfsId();
+    DataFetcher<Iterable<TripPattern>> patterns();
+    DataFetcher<Route> route();
+    DataFetcher<Iterable<GeneralPatternStop>> stops();
+  }
+
+  /** A stop of a general pattern. Platforms and stops of one station are merged into one. */
+  public interface GraphQLGeneralPatternStop {
+    DataFetcher<Boolean> lineTerminus();
+    DataFetcher<Iterable<Object>> mergedStops();
+    DataFetcher<Object> station();
+    DataFetcher<GraphQLGeneralPatternStopStatus> status();
+    DataFetcher<Object> stop();
+    DataFetcher<Boolean> tripsEndHere();
+    DataFetcher<Boolean> tripsStartHere();
+  }
+
   public interface GraphQLGeometry {
     DataFetcher<Integer> length();
     DataFetcher<String> points();
@@ -633,6 +662,7 @@ public class GraphQLDataFetchers {
     DataFetcher<Iterable<TripOnServiceDate>> canceledTrips();
     DataFetcher<String> code();
     DataFetcher<Integer> directionId();
+    DataFetcher<GeneralPattern> generalPattern();
     DataFetcher<Iterable<Coordinate>> geometry();
     DataFetcher<String> headsign();
     DataFetcher<graphql.relay.Relay.ResolvedGlobalId> id();
@@ -763,6 +793,7 @@ public class GraphQLDataFetchers {
     DataFetcher<PatternAtStop> departureRow();
     DataFetcher<Iterable<String>> feeds();
     DataFetcher<Trip> fuzzyTrip();
+    DataFetcher<GeneralPattern> generalPattern();
     DataFetcher<Leg> leg();
     DataFetcher<Connection<PlaceAtDistance>> nearest();
     DataFetcher<Object> node();
@@ -905,6 +936,7 @@ public class GraphQLDataFetchers {
     DataFetcher<GraphQLBikesAllowed> bikesAllowed();
     DataFetcher<String> color();
     DataFetcher<String> desc();
+    DataFetcher<Iterable<GeneralPattern>> generalPatterns();
     DataFetcher<String> gtfsId();
     DataFetcher<graphql.relay.Relay.ResolvedGlobalId> id();
     DataFetcher<Boolean> isReplacement();

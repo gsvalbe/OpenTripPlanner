@@ -44,6 +44,7 @@ import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.ext.fares.model.FareRuleSet;
 import org.opentripplanner.ext.fares.service.gtfs.GtfsFaresService;
 import org.opentripplanner.ext.fares.service.gtfs.v1.DefaultFareService;
+import org.opentripplanner.ext.generalpattern.model.GeneralPattern;
 import org.opentripplanner.ext.geocoder.SearchHit;
 import org.opentripplanner.ext.geocoder.SearchType;
 import org.opentripplanner.framework.graphql.CountedConnection;
@@ -393,6 +394,22 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   }
 
   @Override
+  public DataFetcher<GeneralPattern> generalPattern() {
+    return environment ->
+      mapFeedScopedIdOrNull(
+        new GraphQLTypes.GraphQLQueryTypeGeneralPatternArgs(
+          environment.getArguments()
+        ).getGraphQLId(),
+        id ->
+          environment
+            .<GtfsGraphQLRequestContext>getContext()
+            .generalPatternService()
+            .findById(id)
+            .orElse(null)
+      );
+  }
+
+  @Override
   public DataFetcher<Leg> leg() {
     return environment -> {
       TransitService transitService = getTransitService(environment);
@@ -543,7 +560,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   @Override
   public DataFetcher<DataFetcherResult<RoutingResponse>> plan() {
     return environment -> {
-      GtfsGraphQLRequestContext context = environment.<GtfsGraphQLRequestContext>getContext();
+      GtfsGraphQLRequestContext context = environment.getContext();
       RouteRequest request = LegacyRouteRequestMapper.toRouteRequest(environment, context);
       return getPlanResult(context, request);
     };
@@ -552,7 +569,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   @Override
   public DataFetcher<DataFetcherResult<RoutingResponse>> planConnection() {
     return environment -> {
-      GtfsGraphQLRequestContext context = environment.<GtfsGraphQLRequestContext>getContext();
+      GtfsGraphQLRequestContext context = environment.getContext();
       RouteRequest request = RouteRequestMapper.toRouteRequest(environment, context);
       return getPlanResult(context, request);
     };

@@ -1284,6 +1284,17 @@ public class GraphQLTypes {
     SCOOTER_STANDING,
   }
 
+  /**
+   * How the trips of a general pattern serve one of its stops. Only trips that reach the stop (it lies
+   * between their first and last stop) are counted, so a trip ending earlier does not make it less
+   * than `ALWAYS`.
+   */
+  public enum GraphQLGeneralPatternStopStatus {
+    ALWAYS,
+    DETOUR,
+    SOMETIMES_SKIPPED,
+  }
+
   public static class GraphQLInputBannedInput {
 
     private String agencies;
@@ -3485,6 +3496,25 @@ public class GraphQLTypes {
 
     public void setGraphQLTime(Integer time) {
       this.time = time;
+    }
+  }
+
+  public static class GraphQLQueryTypeGeneralPatternArgs {
+
+    private String id;
+
+    public GraphQLQueryTypeGeneralPatternArgs(Map<String, Object> args) {
+      if (args != null) {
+        this.id = (String) args.get("id");
+      }
+    }
+
+    public String getGraphQLId() {
+      return this.id;
+    }
+
+    public void setGraphQLId(String id) {
+      this.id = id;
     }
   }
 

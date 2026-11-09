@@ -9,25 +9,24 @@ import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.utils.tostring.ToStringBuilder;
 
 /**
- * One stop of a general pattern, at station level. The trip counts are scheduled trips over the
- * whole timetable; everything else (status, termini, track weights) is derived from them, so the
- * same logic can be applied to date-filtered counts later.
+ * One stop of a general pattern, at station level, with the trips that reach, serve, pass or skip
+ * it. The counts are derived from the variants by {@link GeneralPattern#of}; status, termini and
+ * shares are derived from the counts.
  */
-public record GeneralPatternStop(
-  StopLocation stop,
-  @Nullable Station station,
-  List<StopLocation> mergedStops,
-  int reachingTrips,
-  int servedTrips,
-  int passingTrips,
-  int detourTrips,
-  int startingTrips,
-  int endingTrips
-) implements Serializable {
-  public GeneralPatternStop(
-    StopLocation stop,
-    @Nullable Station station,
-    List<StopLocation> mergedStops,
+public final class GeneralPatternStop implements Serializable {
+
+  private final GeneralPatternPlace place;
+  private final boolean lineTerminus;
+  private final int reachingTrips;
+  private final int servedTrips;
+  private final int passingTrips;
+  private final int detourTrips;
+  private final int startingTrips;
+  private final int endingTrips;
+
+  GeneralPatternStop(
+    GeneralPatternPlace place,
+    boolean lineTerminus,
     int reachingTrips,
     int servedTrips,
     int passingTrips,
@@ -35,9 +34,8 @@ public record GeneralPatternStop(
     int startingTrips,
     int endingTrips
   ) {
-    this.stop = Objects.requireNonNull(stop);
-    this.station = station;
-    this.mergedStops = List.copyOf(mergedStops);
+    this.place = Objects.requireNonNull(place);
+    this.lineTerminus = lineTerminus;
     this.reachingTrips = reachingTrips;
     this.servedTrips = servedTrips;
     this.passingTrips = passingTrips;
@@ -51,59 +49,69 @@ public record GeneralPatternStop(
     }
   }
 
-  /** A representative stop: one of the {@link #mergedStops()} that the route uses. */
-  @Override
+  public GeneralPatternPlace place() {
+    return place;
+  }
+
+  /** A stop the route uses at this place. */
   public StopLocation stop() {
-    return stop;
+    return place.stop();
   }
 
   /** The parent station, if the stops have one. */
-  @Override
   @Nullable
   public Station station() {
-    return station;
+    return place.station();
   }
 
   /** All stops (platforms, same-name stops) merged into this general pattern stop. */
-  @Override
   public List<StopLocation> mergedStops() {
-    return mergedStops;
+    return place.mergedStops();
   }
 
   /** Trips whose span (first to last stop) includes this stop. */
-  @Override
   public int reachingTrips() {
     return reachingTrips;
   }
 
   /** Trips that stop here. */
-  @Override
   public int servedTrips() {
     return servedTrips;
   }
 
   /** Trips that pass this stop without stopping. */
-  @Override
   public int passingTrips() {
     return passingTrips;
   }
 
   /** Trips that do not take the detour to this stop. */
-  @Override
   public int detourTrips() {
     return detourTrips;
   }
 
   /** Trips that start here. */
-  @Override
   public int startingTrips() {
     return startingTrips;
   }
 
   /** Trips that end here. */
-  @Override
   public int endingTrips() {
     return endingTrips;
+  }
+
+  /** Whether this is the first or the last stop of the general pattern. */
+  public boolean lineTerminus() {
+    return lineTerminus;
+  }
+
+  /** Whether at least one trip starts here. */
+  public boolean tripsStartHere() {
+    return startingTrips > 0;
+  }
+
+  /** Whether at least one trip ends here. */
+  public boolean tripsEndHere() {
+    return endingTrips > 0;
   }
 
   public StopStatus status() {
@@ -119,9 +127,9 @@ public record GeneralPatternStop(
   @Override
   public String toString() {
     return ToStringBuilder.of(GeneralPatternStop.class)
-      .addObj("stop", stop.getId())
-      .addObj("station", station == null ? null : station.getId())
-      .addNum("mergedStops", mergedStops.size())
+      .addObj("stop", place.stop().getId())
+      .addObj("station", place.station() == null ? null : place.station().getId())
+      .addNum("mergedStops", place.mergedStops().size())
       .addNum("reaching", reachingTrips)
       .addNum("served", servedTrips)
       .addNum("passing", passingTrips, 0)

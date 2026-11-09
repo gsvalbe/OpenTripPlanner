@@ -11,6 +11,9 @@ import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.DataFetchingEnvironmentImpl;
 import java.util.Map;
 import org.opentripplanner.apis.gtfs.GtfsGraphQLRequestContext;
+import org.opentripplanner.ext.generalpattern.GeneralPatternService;
+import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternRepository;
+import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternService;
 import org.opentripplanner.routing.fares.FareService;
 import org.opentripplanner.transit.service.DefaultTransitService;
 import org.opentripplanner.transit.service.TransitRepository;
@@ -50,6 +53,22 @@ public class DataFetchingSupport {
     TransitService service,
     FareService fareService
   ) {
+    return dataFetchingEnvironment(
+      source,
+      arguments,
+      service,
+      fareService,
+      new DefaultGeneralPatternService(new DefaultGeneralPatternRepository())
+    );
+  }
+
+  public static DataFetchingEnvironment dataFetchingEnvironment(
+    Object source,
+    Map<String, Object> arguments,
+    TransitService service,
+    FareService fareService,
+    GeneralPatternService generalPatternService
+  ) {
     final var executionContext = executionContext();
     return DataFetchingEnvironmentImpl.newDataFetchingEnvironment(executionContext)
       .source(source)
@@ -68,7 +87,8 @@ public class DataFetchingSupport {
           null,
           null,
           null,
-          null
+          null,
+          generalPatternService
         )
       )
       .build();

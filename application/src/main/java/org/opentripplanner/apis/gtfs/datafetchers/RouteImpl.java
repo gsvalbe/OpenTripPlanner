@@ -16,6 +16,7 @@ import org.opentripplanner.apis.gtfs.mapping.BikesAllowedMapper;
 import org.opentripplanner.apis.gtfs.mapping.TransitModeMapper;
 import org.opentripplanner.apis.gtfs.support.filter.PatternByDateFilterUtil;
 import org.opentripplanner.apis.gtfs.support.time.LocalDateRangeUtil;
+import org.opentripplanner.ext.generalpattern.model.GeneralPattern;
 import org.opentripplanner.routing.alertpatch.EntitySelector;
 import org.opentripplanner.routing.alertpatch.TransitAlert;
 import org.opentripplanner.routing.services.TransitAlertService;
@@ -26,6 +27,7 @@ import org.opentripplanner.transit.model.organization.Agency;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.model.timetable.Direction;
 import org.opentripplanner.transit.model.timetable.Trip;
+import org.opentripplanner.transit.service.ReplacementHelper;
 import org.opentripplanner.transit.service.TransitService;
 
 public class RouteImpl implements GraphQLDataFetchers.GraphQLRoute {
@@ -156,6 +158,15 @@ public class RouteImpl implements GraphQLDataFetchers.GraphQLRoute {
   }
 
   @Override
+  public DataFetcher<Iterable<GeneralPattern>> generalPatterns() {
+    return environment ->
+      environment
+        .<GtfsGraphQLRequestContext>getContext()
+        .generalPatternService()
+        .findByRoute(getSource(environment));
+  }
+
+  @Override
   public DataFetcher<String> gtfsId() {
     return environment -> getSource(environment).getId().toString();
   }
@@ -171,7 +182,7 @@ public class RouteImpl implements GraphQLDataFetchers.GraphQLRoute {
     return environment -> {
       var route = getSource(environment);
       var replacementHelper = getTransitService(environment).getReplacementHelper();
-      return replacementHelper.isReplacementRoute(route);
+      return ReplacementHelper.isReplacementRoute(route);
     };
   }
 

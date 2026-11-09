@@ -17,6 +17,7 @@ import org.opentripplanner.ext.carpooling.CarpoolingService;
 import org.opentripplanner.ext.dataoverlay.configuration.DataOverlayParameterBindings;
 import org.opentripplanner.ext.empiricaldelay.EmpiricalDelayService;
 import org.opentripplanner.ext.flex.FlexParameters;
+import org.opentripplanner.ext.generalpattern.GeneralPatternService;
 import org.opentripplanner.ext.geocoder.LuceneIndex;
 import org.opentripplanner.ext.interactivelauncher.api.LauncherRequestDecorator;
 import org.opentripplanner.ext.ojp.parameters.OjpApiParameters;
@@ -270,7 +271,8 @@ public class RequestScopedModule {
     Graph graph,
     LinkingContextFactory linkingContextFactory,
     RouteRequest defaultRouteRequest,
-    @Nullable LuceneIndex luceneIndex
+    @Nullable LuceneIndex luceneIndex,
+    GeneralPatternService generalPatternService
   ) {
     var realtimeVehicleSnapshot = realtimeVehicleRepositoryHandle.repositorySnapshot(
       transactionScope
@@ -297,7 +299,8 @@ public class RequestScopedModule {
       nearbyPlaceFinder,
       nearbyStopFinder,
       defaultRouteRequest,
-      luceneIndex
+      luceneIndex,
+      generalPatternService
     );
   }
 }

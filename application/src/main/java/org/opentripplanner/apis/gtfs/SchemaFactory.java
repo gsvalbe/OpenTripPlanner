@@ -33,6 +33,8 @@ import org.opentripplanner.apis.gtfs.datafetchers.EstimatedTimeImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.FareProductTypeResolver;
 import org.opentripplanner.apis.gtfs.datafetchers.FareProductUseImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.FeedImpl;
+import org.opentripplanner.apis.gtfs.datafetchers.GeneralPatternImpl;
+import org.opentripplanner.apis.gtfs.datafetchers.GeneralPatternStopImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.GeometryImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.ItineraryImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.LegImpl;
@@ -170,6 +172,8 @@ public class SchemaFactory {
         .type(typeWiring.build(DepartureRowImpl.class))
         .type(typeWiring.build(elevationProfileComponentImpl.class))
         .type(typeWiring.build(FeedImpl.class))
+        .type(typeWiring.build(GeneralPatternImpl.class))
+        .type(typeWiring.build(GeneralPatternStopImpl.class))
         .type(typeWiring.build(GeometryImpl.class))
         .type(typeWiring.build(ItineraryImpl.class))
         .type(typeWiring.build(LegImpl.class))

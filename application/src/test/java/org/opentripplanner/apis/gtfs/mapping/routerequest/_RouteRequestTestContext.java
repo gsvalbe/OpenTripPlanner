@@ -17,6 +17,8 @@ import org.opentripplanner.apis.gtfs.SchemaFactory;
 import org.opentripplanner.apis.gtfs.TestRoutingService;
 import org.opentripplanner.apis.support.graphql.DataFetchingSupport;
 import org.opentripplanner.ext.fares.service.gtfs.v1.DefaultFareService;
+import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternRepository;
+import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternService;
 import org.opentripplanner.place.nearbystopfinder.StreetNearbyStopFinder;
 import org.opentripplanner.place.placefinder.StreetNearbyPlaceFinder;
 import org.opentripplanner.routing.api.request.RouteRequest;
@@ -93,7 +95,8 @@ class _RouteRequestTestContext {
       new StreetNearbyPlaceFinder(linkingContextFactory),
       StreetNearbyStopFinder.of(linkingContextFactory).build(),
       routeRequest,
-      null
+      null,
+      new DefaultGeneralPatternService(new DefaultGeneralPatternRepository())
     );
   }
 

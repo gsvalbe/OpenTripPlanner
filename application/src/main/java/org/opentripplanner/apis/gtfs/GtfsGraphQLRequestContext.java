@@ -2,6 +2,7 @@ package org.opentripplanner.apis.gtfs;
 
 import graphql.schema.GraphQLSchema;
 import javax.annotation.Nullable;
+import org.opentripplanner.ext.generalpattern.GeneralPatternService;
 import org.opentripplanner.ext.geocoder.LuceneIndex;
 import org.opentripplanner.place.NearbyPlaceFinder;
 import org.opentripplanner.place.NearbyStopFinder;
@@ -31,7 +32,11 @@ public record GtfsGraphQLRequestContext(
   /**
    * The search index, or null when the geocoder feature is switched off and it was never built.
    */
-  @Nullable LuceneIndex luceneIndex
+  @Nullable LuceneIndex luceneIndex,
+  /**
+   * General patterns. Lookups return nothing when the general patterns feature is off.
+   */
+  GeneralPatternService generalPatternService
 ) {
   /**
    * Returns a clone of the default route request. The clone is necessary because one HTTP

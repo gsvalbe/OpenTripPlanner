@@ -4,7 +4,7 @@ import dagger.Module;
 import dagger.Provides;
 import jakarta.inject.Singleton;
 import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
-import org.opentripplanner.ext.generalpattern.internal.build.GeneralPatternGraphBuilder;
+import org.opentripplanner.ext.generalpattern.internal.graphbuilder.GeneralPatternGraphBuilder;
 import org.opentripplanner.standalone.config.BuildConfig;
 import org.opentripplanner.transit.service.TransitRepository;
 

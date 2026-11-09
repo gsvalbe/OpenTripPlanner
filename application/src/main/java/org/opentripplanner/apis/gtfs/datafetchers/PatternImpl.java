@@ -21,6 +21,7 @@ import org.opentripplanner.apis.gtfs.service.ApiTransitService;
 import org.opentripplanner.apis.gtfs.support.time.LocalDateRangeUtil;
 import org.opentripplanner.apis.gtfs.support.time.OffsetDateTimeRangeUtil;
 import org.opentripplanner.apis.support.SemanticHash;
+import org.opentripplanner.ext.generalpattern.model.GeneralPattern;
 import org.opentripplanner.framework.graphql.GraphQLUtils;
 import org.opentripplanner.routing.alertpatch.EntitySelector;
 import org.opentripplanner.routing.alertpatch.TransitAlert;
@@ -147,6 +148,16 @@ public class PatternImpl implements GraphQLDataFetchers.GraphQLPattern {
   @Override
   public DataFetcher<Integer> directionId() {
     return environment -> getSource(environment).getDirection().gtfsCode;
+  }
+
+  @Override
+  public DataFetcher<GeneralPattern> generalPattern() {
+    return environment ->
+      environment
+        .<GtfsGraphQLRequestContext>getContext()
+        .generalPatternService()
+        .findByTripPattern(getSource(environment))
+        .orElse(null);
   }
 
   @Override
