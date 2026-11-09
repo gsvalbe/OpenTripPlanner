@@ -177,7 +177,6 @@ public class AtlantaFareService extends DefaultFareService {
   }
 
   private record TransferMeta(TransferType type, Money upcharge, boolean payOnExit) {
-
     /**
      * Create a TransferMeta
      *
@@ -185,13 +184,12 @@ public class AtlantaFareService extends DefaultFareService {
      * @param upcharge  Upcharge for the transfer in cents
      * @param payOnExit Whether the fare is charged at end of leg
      */
-    private TransferMeta {
-    }
+    private TransferMeta {}
 
-      public TransferMeta(TransferType type) {
-        this(type, ZERO_USD, false);
-      }
+    public TransferMeta(TransferType type) {
+      this(type, ZERO_USD, false);
     }
+  }
 
   private static RideType classify(Leg ride) {
     Route getRoute = ride.route();

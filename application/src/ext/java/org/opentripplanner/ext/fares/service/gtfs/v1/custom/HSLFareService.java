@@ -100,12 +100,13 @@ public class HSLFareService extends DefaultFareService {
           leg.from().stop.getFirstZoneAsString(),
           leg.to().stop.getFirstZoneAsString()
         );
-        boolean isSpecialRoute = !ruleSet.getRouteOriginDestinations().isEmpty() &&
+        boolean isSpecialRoute =
+          !ruleSet.getRouteOriginDestinations().isEmpty() &&
           ruleSet
             .getRouteOriginDestinations()
             .toString()
             .indexOf(routeOriginDestination.toString()) !=
-            -1;
+          -1;
 
         if (
           isSpecialRoute ||

@@ -16,6 +16,7 @@ import org.opentripplanner.apis.gtfs.datafetchers.BikeParkImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.BikeRentalStationImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.BookingInfoImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.BookingTimeImpl;
+import org.opentripplanner.apis.gtfs.datafetchers.BoundingBoxImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.CallScheduledTimeTypeResolver;
 import org.opentripplanner.apis.gtfs.datafetchers.CallStopLocationTypeResolver;
 import org.opentripplanner.apis.gtfs.datafetchers.CarParkImpl;
@@ -55,6 +56,7 @@ import org.opentripplanner.apis.gtfs.datafetchers.RentalVehicleTypeImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.RideHailingEstimateImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.RiderCategoryImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.RouteImpl;
+import org.opentripplanner.apis.gtfs.datafetchers.RouteRegionImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.RouteTypeImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.RoutingErrorImpl;
 import org.opentripplanner.apis.gtfs.datafetchers.SearchResultImpl;
@@ -202,6 +204,8 @@ public class SchemaFactory {
         .type(typeWiring.build(StopOnTripImpl.class))
         .type(typeWiring.build(UnknownImpl.class))
         .type(typeWiring.build(RouteTypeImpl.class))
+        .type(typeWiring.build(RouteRegionImpl.class))
+        .type(typeWiring.build(BoundingBoxImpl.class))
         .type(typeWiring.build(RoutingErrorImpl.class))
         .type(typeWiring.build(StopGeometriesImpl.class))
         .type(typeWiring.build(VehiclePositionImpl.class))

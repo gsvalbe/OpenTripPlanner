@@ -6,10 +6,12 @@ import com.google.common.collect.Multimap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.opentripplanner.core.model.id.FeedScopedId;
@@ -17,8 +19,11 @@ import org.opentripplanner.ext.flex.FlexIndex;
 import org.opentripplanner.ext.flex.trip.FlexTrip;
 import org.opentripplanner.framework.application.OTPFeature;
 import org.opentripplanner.model.calendar.CalendarService;
+import org.opentripplanner.street.geometry.WgsCoordinate;
+import org.opentripplanner.transit.model.basic.WgsBoundingBox;
 import org.opentripplanner.transit.model.network.GroupOfRoutes;
 import org.opentripplanner.transit.model.network.Route;
+import org.opentripplanner.transit.model.network.RouteRegion;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.organization.Agency;
 import org.opentripplanner.transit.model.organization.Operator;
@@ -58,6 +63,7 @@ class TimetableRepositoryIndex {
 
   private final Map<FeedScopedId, GroupOfRoutes> groupOfRoutesForId = new HashMap<>();
   private FlexIndex flexIndex = null;
+  private List<RouteRegion> routeRegions = List.of();
 
   TimetableRepositoryIndex(TimetableRepository timetableRepository) {
     LOG.info("Timetable repository index init...");
@@ -113,6 +119,8 @@ class TimetableRepositoryIndex {
         tripForId.put(flexTrip.getId(), flexTrip.getTrip());
       }
     }
+
+    initializeRouteRegions();
 
     LOG.info("Timetable repository index init complete.");
   }
@@ -268,6 +276,45 @@ class TimetableRepositoryIndex {
       }
     }
     endOfServiceDateForStop = Map.copyOf(endOfServiceDates);
+  }
+
+  /**
+   * Derive the bounds of each route region from the stops visited by the region's routes.
+   */
+  private void initializeRouteRegions() {
+    Map<String, List<WgsCoordinate>> coordinatesForRegion = new HashMap<>();
+    for (Route route : routeForId.values()) {
+      if (route.getRegionName() != null) {
+        coordinatesForRegion.putIfAbsent(route.getRegionName(), new ArrayList<>());
+      }
+    }
+    for (TripPattern pattern : patternsForRoute.values()) {
+      String regionName = pattern.getRoute().getRegionName();
+      if (regionName != null) {
+        for (StopLocation stop : pattern.getStops()) {
+          coordinatesForRegion.get(regionName).add(stop.getCoordinate());
+        }
+      }
+    }
+    if (flexIndex != null) {
+      for (FlexTrip<?, ?> flexTrip : flexIndex.getAllFlexTrips()) {
+        String regionName = flexTrip.getTrip().getRoute().getRegionName();
+        if (regionName != null) {
+          for (StopLocation stop : flexTrip.getStops()) {
+            coordinatesForRegion.get(regionName).add(stop.getCoordinate());
+          }
+        }
+      }
+    }
+    routeRegions = coordinatesForRegion
+      .entrySet()
+      .stream()
+      .map(e -> new RouteRegion(e.getKey(), WgsBoundingBox.of(e.getValue()).orElse(null)))
+      .toList();
+  }
+
+  Collection<RouteRegion> getRouteRegions() {
+    return routeRegions;
   }
 
   Collection<GroupOfRoutes> getAllGroupOfRoutes() {

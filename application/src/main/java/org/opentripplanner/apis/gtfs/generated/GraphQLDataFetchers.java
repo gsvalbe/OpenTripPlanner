@@ -79,9 +79,11 @@ import org.opentripplanner.service.vehiclerental.model.VehicleRentalVehicle;
 import org.opentripplanner.street.model.openinghours.OHCalendar;
 import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
 import org.opentripplanner.transit.model.basic.Money;
+import org.opentripplanner.transit.model.basic.WgsBoundingBox;
 import org.opentripplanner.transit.model.network.ReplacedByRelation;
 import org.opentripplanner.transit.model.network.ReplacementForRelation;
 import org.opentripplanner.transit.model.network.Route;
+import org.opentripplanner.transit.model.network.RouteRegion;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.organization.Agency;
 import org.opentripplanner.transit.model.timetable.EstimatedTime;
@@ -201,6 +203,14 @@ public class GraphQLDataFetchers {
   public interface GraphQLBookingTime {
     DataFetcher<Integer> daysPrior();
     DataFetcher<String> time();
+  }
+
+  /** A geographic bounding box in WGS 84 coordinates. */
+  public interface GraphQLBoundingBox {
+    DataFetcher<Double> maxLat();
+    DataFetcher<Double> maxLon();
+    DataFetcher<Double> minLat();
+    DataFetcher<Double> minLon();
   }
 
   /** Real-time estimates for arrival and departure times for a stop location. */
@@ -697,6 +707,7 @@ public class GraphQLDataFetchers {
     DataFetcher<VehicleRentalVehicle> rentalVehicle();
     DataFetcher<Iterable<VehicleRentalVehicle>> rentalVehicles();
     DataFetcher<Route> route();
+    DataFetcher<Iterable<RouteRegion>> routeRegions();
     DataFetcher<Iterable<Route>> routes();
     DataFetcher<Iterable<SearchResultModel>> search();
     DataFetcher<Object> serviceTimeRange();
@@ -832,6 +843,15 @@ public class GraphQLDataFetchers {
     DataFetcher<Iterable<Trip>> trips();
     DataFetcher<Integer> type();
     DataFetcher<String> url();
+  }
+
+  /**
+   * A named geographic region that routes belong to, sourced from the `region_name` column in
+   * routes.txt.
+   */
+  public interface GraphQLRouteRegion {
+    DataFetcher<WgsBoundingBox> bounds();
+    DataFetcher<String> name();
   }
 
   /**

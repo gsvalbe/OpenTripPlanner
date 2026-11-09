@@ -4017,6 +4017,35 @@ public class GraphQLTypes {
     }
   }
 
+  public static class GraphQLQueryTypeRegionsArgs {
+
+    private Double lat;
+    private Double lon;
+
+    public GraphQLQueryTypeRegionsArgs(Map<String, Object> args) {
+      if (args != null) {
+        this.lat = (Double) args.get("lat");
+        this.lon = (Double) args.get("lon");
+      }
+    }
+
+    public Double getGraphQLLat() {
+      return this.lat;
+    }
+
+    public Double getGraphQLLon() {
+      return this.lon;
+    }
+
+    public void setGraphQLLat(Double lat) {
+      this.lat = lat;
+    }
+
+    public void setGraphQLLon(Double lon) {
+      this.lon = lon;
+    }
+  }
+
   public static class GraphQLQueryTypeRentalVehicleArgs {
 
     private String id;
@@ -4088,6 +4117,35 @@ public class GraphQLTypes {
 
     public void setGraphQLId(String id) {
       this.id = id;
+    }
+  }
+
+  public static class GraphQLQueryTypeRouteRegionsArgs {
+
+    private Double lat;
+    private Double lon;
+
+    public GraphQLQueryTypeRouteRegionsArgs(Map<String, Object> args) {
+      if (args != null) {
+        this.lat = (Double) args.get("lat");
+        this.lon = (Double) args.get("lon");
+      }
+    }
+
+    public Double getGraphQLLat() {
+      return this.lat;
+    }
+
+    public Double getGraphQLLon() {
+      return this.lon;
+    }
+
+    public void setGraphQLLat(Double lat) {
+      this.lat = lat;
+    }
+
+    public void setGraphQLLon(Double lon) {
+      this.lon = lon;
     }
   }
 

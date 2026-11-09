@@ -33,6 +33,7 @@ import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.framework.AbstractTransitEntity;
 import org.opentripplanner.transit.model.network.GroupOfRoutes;
 import org.opentripplanner.transit.model.network.Route;
+import org.opentripplanner.transit.model.network.RouteRegion;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.organization.Agency;
 import org.opentripplanner.transit.model.organization.Operator;
@@ -210,6 +211,12 @@ public interface TransitService {
    * Return all routes, including those created by real-time updates.
    */
   Collection<Route> listRoutes();
+
+  /**
+   * Return all route regions with bounds derived from the stops of their scheduled routes. Routes
+   * added by real-time updates are not included.
+   */
+  Collection<RouteRegion> listRouteRegions();
 
   /**
    * Return the scheduled trip pattern for a given trip.

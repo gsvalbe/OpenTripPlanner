@@ -335,6 +335,18 @@ type BookingTime {
   time: String
 }
 
+"A geographic bounding box in WGS 84 coordinates."
+type BoundingBox {
+  "Northern edge of the box."
+  maxLat: CoordinateValue!
+  "Eastern edge of the box."
+  maxLon: CoordinateValue!
+  "Southern edge of the box."
+  minLat: CoordinateValue!
+  "Western edge of the box."
+  minLon: CoordinateValue!
+}
+
 "Real-time estimates for arrival and departure times for a stop location."
 type CallRealTime {
   "Real-time estimates for the arrival."
@@ -1860,8 +1872,18 @@ type QueryType {
     "The list of points the itinerary is required to pass through."
     via: [PlanViaLocationInput!]
   ): PlanConnection @async @timingData
-  "Get all region names."
-  regions: [String!] @timingData
+  """
+  Get all region names.
+
+  If `lat` and `lon` are given the names are sorted by proximity of the region bounds, see
+  `routeRegions`. Otherwise the order is unspecified.
+  """
+  regions(
+    "Latitude of the location (WGS 84) to sort the regions by. Must be given together with `lon`."
+    lat: CoordinateValue,
+    "Longitude of the location (WGS 84) to sort the regions by. Must be given together with `lat`."
+    lon: CoordinateValue
+  ): [String!] @timingData
   "Get a single rental vehicle based on its ID, i.e. value of field `vehicleId`"
   rentalVehicle(id: String!): RentalVehicle @timingData
   "Get all rental vehicles"
@@ -1879,6 +1901,19 @@ type QueryType {
   ): [RentalVehicle] @timingData
   "Get a single route based on its ID, i.e. value of field `gtfsId` (format is `FeedId:RouteId`)"
   route(id: String!): Route @timingData
+  """
+  Get all route regions with their geographic bounds.
+
+  If `lat` and `lon` are given, the regions are sorted with the closest region first. If the
+  location is inside several regions, the smallest of them comes first. Regions without bounds
+  come last. Without a location the regions are sorted by name.
+  """
+  routeRegions(
+    "Latitude of the location (WGS 84) to sort the regions by. Must be given together with `lon`."
+    lat: CoordinateValue,
+    "Longitude of the location (WGS 84) to sort the regions by. Must be given together with `lat`."
+    lon: CoordinateValue
+  ): [RouteRegion!]! @timingData
   "Get all routes"
   routes(
     "Only return routes with these feedIds"
@@ -2258,6 +2293,20 @@ type Route implements Node {
   """
   type: Int
   url: String
+}
+
+"""
+A named geographic region that routes belong to, sourced from the `region_name` column in
+routes.txt.
+"""
+type RouteRegion {
+  """
+  Bounding box of all stops served by the routes in this region. Null if none of the routes
+  serve any stops.
+  """
+  bounds: BoundingBox
+  "Name of the region, same as `Route.regionName`."
+  name: String!
 }
 
 """

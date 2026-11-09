@@ -13,11 +13,17 @@ import org.opentripplanner.utils.tostring.ToStringBuilder;
  * whole timetable; everything else (status, termini, track weights) is derived from them, so the
  * same logic can be applied to date-filtered counts later.
  */
-public record GeneralPatternStop(StopLocation stop, @Nullable Station station,
-                                 List<StopLocation> mergedStops, int reachingTrips, int servedTrips,
-                                 int passingTrips, int detourTrips, int startingTrips,
-                                 int endingTrips) implements Serializable {
-
+public record GeneralPatternStop(
+  StopLocation stop,
+  @Nullable Station station,
+  List<StopLocation> mergedStops,
+  int reachingTrips,
+  int servedTrips,
+  int passingTrips,
+  int detourTrips,
+  int startingTrips,
+  int endingTrips
+) implements Serializable {
   public GeneralPatternStop(
     StopLocation stop,
     @Nullable Station station,

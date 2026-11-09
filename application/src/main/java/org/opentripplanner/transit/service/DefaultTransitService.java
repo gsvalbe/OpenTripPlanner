@@ -49,6 +49,7 @@ import org.opentripplanner.transit.model.filter.transit.TripOnServiceDateMatcher
 import org.opentripplanner.transit.model.framework.AbstractTransitEntity;
 import org.opentripplanner.transit.model.network.GroupOfRoutes;
 import org.opentripplanner.transit.model.network.Route;
+import org.opentripplanner.transit.model.network.RouteRegion;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.organization.Agency;
 import org.opentripplanner.transit.model.organization.Operator;
@@ -376,6 +377,11 @@ public class DefaultTransitService implements TransitEditorService {
       );
     }
     return timetableRepositoryIndex.getAllRoutes();
+  }
+
+  @Override
+  public Collection<RouteRegion> listRouteRegions() {
+    return timetableRepositoryIndex.getRouteRegions();
   }
 
   @Override

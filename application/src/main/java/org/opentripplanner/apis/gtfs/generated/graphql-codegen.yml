@@ -38,6 +38,7 @@ config:
   mappers:
     AbsoluteDirection: org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLAbsoluteDirection#GraphQLAbsoluteDirection
     Agency: org.opentripplanner.transit.model.organization.Agency#Agency
+    RouteRegion: org.opentripplanner.transit.model.network.RouteRegion#RouteRegion
     RouteType: org.opentripplanner.apis.gtfs.model.RouteTypeModel#RouteTypeModel
     Alert: org.opentripplanner.routing.alertpatch.TransitAlert#TransitAlert
     AlertCauseType: org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLAlertCauseType#GraphQLAlertCauseType
@@ -54,6 +55,7 @@ config:
     VehicleRentalUris: org.opentripplanner.service.vehiclerental.model.VehicleRentalStationUris#VehicleRentalStationUris
     BikesAllowed: org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLBikesAllowed#GraphQLBikesAllowed
     TripPatternType: org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLTripPatternType#GraphQLTripPatternType
+    BoundingBox: org.opentripplanner.transit.model.basic.WgsBoundingBox#WgsBoundingBox
     BookingInfo: org.opentripplanner.transit.model.timetable.booking.BookingInfo#BookingInfo
     BookingTime: org.opentripplanner.transit.model.timetable.booking.BookingTime#BookingTime
     CarPark: org.opentripplanner.service.vehicleparking.model.VehicleParking#VehicleParking

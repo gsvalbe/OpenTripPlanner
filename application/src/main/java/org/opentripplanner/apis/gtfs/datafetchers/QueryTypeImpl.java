@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -73,6 +74,7 @@ import org.opentripplanner.service.vehiclerental.model.VehicleRentalVehicle;
 import org.opentripplanner.street.geometry.WgsCoordinate;
 import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.network.Route;
+import org.opentripplanner.transit.model.network.RouteRegion;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.organization.Agency;
 import org.opentripplanner.transit.model.site.RegularStop;
@@ -529,14 +531,35 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
 
   @Override
   public DataFetcher<Iterable<String>> regions() {
-    return environment ->
-      getTransitService(environment)
+    return environment -> {
+      var args = new GraphQLTypes.GraphQLQueryTypeRegionsArgs(environment.getArguments());
+      var location = WgsCoordinate.creatOptionalCoordinate(
+        args.getGraphQLLat(),
+        args.getGraphQLLon()
+      );
+      var transitService = getTransitService(environment);
+      var names = transitService
         .listRoutes()
         .stream()
         .map(Route::getRegionName)
         .filter(Objects::nonNull)
         .distinct()
         .toList();
+      if (location == null) {
+        return names;
+      }
+      // Real-time added routes may introduce regions which have no precomputed bounds
+      Map<String, RouteRegion> regionsByName = transitService
+        .listRouteRegions()
+        .stream()
+        .collect(Collectors.toMap(RouteRegion::name, Function.identity()));
+      return names
+        .stream()
+        .map(name -> regionsByName.getOrDefault(name, new RouteRegion(name, null)))
+        .sorted(RouteRegion.closestFirst(location))
+        .map(RouteRegion::name)
+        .toList();
+    };
   }
 
   @Override
@@ -611,6 +634,21 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
           new GraphQLTypes.GraphQLQueryTypeRouteArgs(environment.getArguments()).getGraphQLId()
         )
       );
+  }
+
+  @Override
+  public DataFetcher<Iterable<RouteRegion>> routeRegions() {
+    return environment -> {
+      var args = new GraphQLTypes.GraphQLQueryTypeRouteRegionsArgs(environment.getArguments());
+      var location = WgsCoordinate.creatOptionalCoordinate(
+        args.getGraphQLLat(),
+        args.getGraphQLLon()
+      );
+      Comparator<RouteRegion> order = location == null
+        ? Comparator.comparing(RouteRegion::name)
+        : RouteRegion.closestFirst(location);
+      return getTransitService(environment).listRouteRegions().stream().sorted(order).toList();
+    };
   }
 
   @Override
