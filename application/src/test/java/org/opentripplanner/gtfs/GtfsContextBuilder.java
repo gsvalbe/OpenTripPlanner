@@ -145,6 +145,8 @@ public class GtfsContextBuilder {
     return deduplicator;
   }
 
-  private record GtfsContextImpl(String feedId, CalendarServiceData calendarServiceData) implements
-    GtfsContext {}
+  private record GtfsContextImpl(
+    String feedId,
+    CalendarServiceData calendarServiceData
+  ) implements GtfsContext {}
 }

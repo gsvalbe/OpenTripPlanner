@@ -1,6 +1,7 @@
 ## Pieturas OpenTripPlanner
 
-This is a fork of the OpenTripPlanner project to be used in [Pieturas](https://pieturas.lv) apps and services.
+This is a fork of the OpenTripPlanner project to be used in [Pieturas](https://pieturas.lv) apps and
+services.
 
 ## Overview
 

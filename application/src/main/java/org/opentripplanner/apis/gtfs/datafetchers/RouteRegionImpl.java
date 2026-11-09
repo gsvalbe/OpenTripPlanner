@@ -3,8 +3,8 @@ package org.opentripplanner.apis.gtfs.datafetchers;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.opentripplanner.apis.gtfs.generated.GraphQLDataFetchers;
-import org.opentripplanner.transit.model.network.WgsBoundingBox;
 import org.opentripplanner.transit.model.network.RouteRegion;
+import org.opentripplanner.transit.model.network.WgsBoundingBox;
 
 public class RouteRegionImpl implements GraphQLDataFetchers.GraphQLRouteRegion {
 

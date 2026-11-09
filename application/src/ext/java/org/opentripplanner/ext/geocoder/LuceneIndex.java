@@ -20,6 +20,8 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.codecs.Codec;
 import org.apache.lucene.codecs.PostingsFormat;
 import org.apache.lucene.codecs.lucene104.Lucene104Codec;
@@ -47,6 +49,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.SortField;
+import org.apache.lucene.search.SynonymQuery;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.suggest.document.Completion104PostingsFormat;
@@ -107,7 +110,7 @@ public class LuceneIndex implements Serializable {
    * match outrank an exact match one city over — for a search from Riga, "Krustpils iela" would then
    * beat the "Krustpils" station in Jēkabpils.
    */
-  private static final float DISTANCE_BOOST = 3.0f;
+  private static final float DISTANCE_BOOST = 1.5f;
 
   /**
    * The distance at which the proximity boost is halved. Tuned for city-scale search, where
@@ -115,6 +118,14 @@ public class LuceneIndex implements Serializable {
    * the boost too flat to reorder results within a city.
    */
   private static final double DISTANCE_PIVOT_METERS = 25_000.0;
+
+  /**
+   * The share of a query word's n-grams that a name must contain for the word to match it. A word
+   * typed as a substring of a name ("exanderpl" in "Alexanderplatz") contains all of its n-grams,
+   * so this only rejects names that merely share a fragment with the word — without it, "Brivibas"
+   * matched every name containing "ibas". Typos are left to the fuzzy clause.
+   */
+  private static final float MIN_NGRAM_COVERAGE = 0.75f;
 
   private final Analyzer analyzer;
   private final SuggestIndexSearcher searcher;
@@ -341,16 +352,8 @@ public class LuceneIndex implements Serializable {
   }
 
   private void addTextClauses(BooleanQuery.Builder builder, String text, float codeBoost) {
-    Query nameQuery;
-    try {
-      // the text comes from a search box, so it is escaped rather than treated as query syntax
-      nameQuery = new QueryParser(NAME_NGRAM, analyzer).parse(QueryParser.escape(text));
-    } catch (ParseException e) {
-      throw new RuntimeException(e);
-    }
-
     builder
-      .add(nameQuery, Occur.SHOULD)
+      .add(ngramNameQuery(text), Occur.SHOULD)
       .add(new TermQuery(new Term(NAME_NGRAM, analyzer.normalize(NAME_NGRAM, text))), Occur.SHOULD)
       .add(fuzzyNameQuery(analyzer.normalize(NAME, text)), Occur.SHOULD)
       .add(new PrefixQuery(new Term(NAME, analyzer.normalize(NAME, text))), Occur.SHOULD)
@@ -364,25 +367,72 @@ public class LuceneIndex implements Serializable {
   /**
    * Lucene's default of two edits is far too loose for short queries: at that distance "5" matches
    * "11", so every two-digit route would come back for a query of "5". The allowance therefore grows
-   * with the length of the term, and a typo is never tolerated in the first character.
+   * with the length of the term, and a typo is never tolerated in the first two characters.
    */
   private static Query fuzzyNameQuery(BytesRef text) {
     var term = new Term(NAME, text);
     int length = text.utf8ToString().length();
-    int maxEdits = length <= 3 ? 0 : length <= 6 ? 1 : 2;
+    int maxEdits = length <= 4 ? 0 : length <= 9 ? 1 : 2;
     if (maxEdits == 0) {
       return new TermQuery(term);
     }
-    return new FuzzyQuery(term, maxEdits, 1);
+    return new FuzzyQuery(term, maxEdits, 2);
+  }
+
+  /**
+   * Matches names containing the query words, also in the middle of a name. Each word matches when
+   * the name contains at least {@link #MIN_NGRAM_COVERAGE} of the word's n-grams, and a name scores
+   * higher the more words it matches.
+   */
+  private Query ngramNameQuery(String text) {
+    var builder = new BooleanQuery.Builder();
+    for (var grams : ngramsPerWord(text)) {
+      var scoring = new SynonymQuery.Builder(NAME_NGRAM);
+      var coverage = new BooleanQuery.Builder().setMinimumNumberShouldMatch(
+        Math.max(1, (int) Math.ceil(grams.size() * MIN_NGRAM_COVERAGE))
+      );
+      for (var gram : grams) {
+        var term = new Term(NAME_NGRAM, gram);
+        scoring.addTerm(term);
+        coverage.add(new TermQuery(term), Occur.SHOULD);
+      }
+      builder.add(
+        new BooleanQuery.Builder()
+          .add(scoring.build(), Occur.MUST)
+          .add(coverage.build(), Occur.FILTER)
+          .build(),
+        Occur.SHOULD
+      );
+    }
+    return builder.build();
+  }
+
+  /**
+   * The distinct n-grams of each word of the text, as the n-gram field indexes them. The n-gram
+   * filter emits all grams of a word at the same position, so a position increment marks the start
+   * of the next word.
+   */
+  private List<Set<String>> ngramsPerWord(String text) {
+    var words = new ArrayList<Set<String>>();
+    try (var stream = analyzer.tokenStream(NAME_NGRAM, text)) {
+      var term = stream.addAttribute(CharTermAttribute.class);
+      var position = stream.addAttribute(PositionIncrementAttribute.class);
+      stream.reset();
+      while (stream.incrementToken()) {
+        if (words.isEmpty() || position.getPositionIncrement() > 0) {
+          words.add(new LinkedHashSet<>());
+        }
+        words.getLast().add(term.toString());
+      }
+      stream.end();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return words;
   }
 
   private void addOriginalTextClause(BooleanQuery.Builder builder, String originalQuery) {
-    try {
-      var query = new QueryParser(NAME_NGRAM, analyzer).parse(QueryParser.escape(originalQuery));
-      builder.add(new BoostQuery(query, ORIGINAL_TEXT_BOOST), Occur.SHOULD);
-    } catch (ParseException e) {
-      throw new RuntimeException(e);
-    }
+    builder.add(new BoostQuery(ngramNameQuery(originalQuery), ORIGINAL_TEXT_BOOST), Occur.SHOULD);
   }
 
   private Query typeFilter(SearchType type) {

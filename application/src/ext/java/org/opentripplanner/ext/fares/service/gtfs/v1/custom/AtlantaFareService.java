@@ -183,7 +183,8 @@ public class AtlantaFareService extends DefaultFareService {
      * @param upcharge  Upcharge for the transfer in cents
      * @param payOnExit Whether the fare is charged at end of leg
      */
-    private TransferMeta {}
+    private TransferMeta {
+    }
 
     public TransferMeta(TransferType type) {
       this(type, ZERO_USD, false);

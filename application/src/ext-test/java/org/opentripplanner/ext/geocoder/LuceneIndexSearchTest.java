@@ -311,6 +311,21 @@ class LuceneIndexSearchTest {
   }
 
   @Test
+  void wordIsFoundInTheMiddleOfAName() {
+    var hits = ids(index.search("traltirg", null, null, 10));
+
+    assertThat(hits).contains(CENTRALTIRGUS.getId());
+  }
+
+  @Test
+  void nameSharingOnlyAFragmentWithTheQueryDoesNotMatch() {
+    var hits = ids(index.search("Krustmala", RIGA, null, 10));
+
+    assertThat(hits).doesNotContain(KRUSTPILS.getId());
+    assertThat(hits).doesNotContain(KRUSTPILS_IELA.getId());
+  }
+
+  @Test
   void bracketedStopIsFoundByThePartBeforeTheBrackets() {
     var hits = ids(index.search("Rīga", RIGA, null, 10));
 
