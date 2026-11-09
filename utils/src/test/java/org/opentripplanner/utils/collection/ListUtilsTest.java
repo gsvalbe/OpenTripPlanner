@@ -1,5 +1,6 @@
 package org.opentripplanner.utils.collection;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -8,6 +9,7 @@ import static org.opentripplanner.utils.collection.ListUtils.last;
 import static org.opentripplanner.utils.collection.ListUtils.requireAtLeastNElements;
 
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +37,21 @@ class ListUtilsTest {
     assertEquals(List.of(1, 2, 3, 5, 6, 7), combined);
   }
 
+  @Test
+  void partition() {
+    assertEquals(List.of(), ListUtils.partition(List.of(), 3));
+    assertEquals(List.of(List.of(1, 2, 3)), ListUtils.partition(List.of(1, 2, 3), 3));
+    assertEquals(
+      List.of(List.of(1, 2, 3), List.of(4, 5)),
+      ListUtils.partition(List.of(1, 2, 3, 4, 5), 3)
+    );
+    assertEquals(
+      List.of(List.of(1), List.of(2), List.of(3)),
+      ListUtils.partition(List.of(1, 2, 3), 1)
+    );
+    assertThrows(IllegalArgumentException.class, () -> ListUtils.partition(List.of(1), 0));
+  }
+
   private static String makeHello() {
     return new String("HELLO");
   }
@@ -57,6 +74,24 @@ class ListUtilsTest {
     // as a result the second element is removed from the result as its "string" value is
     // equal to the first element's
     assertEquals(List.of(first, third), deduplicated);
+  }
+
+  @Test
+  void ofIterableEmpty() {
+    assertThat(ListUtils.ofIterable(List.of())).isEmpty();
+  }
+
+  @Test
+  void ofIterableList() {
+    assertThat(ListUtils.ofIterable(List.of(1, 2, 3)))
+      .containsExactly(1, 2, 3)
+      .inOrder();
+  }
+
+  @Test
+  void ofIterableNonCollectionIterable() {
+    Iterable<Integer> iterable = Set.of(1, 2, 3)::iterator;
+    assertThat(ListUtils.ofIterable(iterable)).containsExactly(1, 2, 3);
   }
 
   @Test

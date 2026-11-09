@@ -33,7 +33,7 @@ import org.opentripplanner.ext.empiricaldelay.internal.DefaultEmpiricalDelayRepo
 import org.opentripplanner.ext.empiricaldelay.model.EmpiricalDelay;
 import org.opentripplanner.ext.empiricaldelay.model.TripDelays;
 import org.opentripplanner.ext.empiricaldelay.model.calendar.EmpiricalDelayCalendar;
-import org.opentripplanner.ext.fares.service.gtfs.v1.DefaultFareServiceFactory;
+import org.opentripplanner.ext.fares.service.gtfs.v1.GtfsFareServiceFactory;
 import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternRepository;
 import org.opentripplanner.framework.model.Gram;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueSummary;
@@ -55,7 +55,7 @@ import org.opentripplanner.street.internal.DefaultStreetRepository;
 import org.opentripplanner.street.model.StreetModelDetails;
 import org.opentripplanner.transfer.regular.TransferRepository;
 import org.opentripplanner.transit.model.framework.Deduplicator;
-import org.opentripplanner.transit.service.TimetableRepository;
+import org.opentripplanner.transit.service.TransitRepository;
 
 /**
  * Tests that saving a graph and reloading it (round trip through serialization and deserialization)
@@ -107,7 +107,7 @@ public class GraphSerializationTest {
       osmGraphBuildRepository,
       streetDetailsRepository,
       streetRepository,
-      model.timetableRepository(),
+      model.transitRepository(),
       model.transferRepository(),
       weRepo,
       parkingRepository,
@@ -118,7 +118,7 @@ public class GraphSerializationTest {
 
   private static DefaultStreetRepository createStreetRepository() {
     var streetRepository = new DefaultStreetRepository();
-    streetRepository.setStreetModelDetails(new StreetModelDetails(33f, 17));
+    streetRepository.setStreetModelDetails(new StreetModelDetails(33f, 17, 1.0f, 1.0f));
     return streetRepository;
   }
 
@@ -140,7 +140,7 @@ public class GraphSerializationTest {
       osmGraphBuildRepository,
       streetDetailsRepository,
       streetRepository,
-      model.timetableRepository(),
+      model.transitRepository(),
       model.transferRepository(),
       worldEnvelopeRepository,
       parkingRepository,
@@ -248,7 +248,7 @@ public class GraphSerializationTest {
     OsmInfoGraphBuildRepository osmInfoGraphBuildRepository,
     StreetDetailsRepository streetDetailsRepository,
     StreetRepository streetRepository,
-    TimetableRepository originalTimetableRepository,
+    TransitRepository originalTransitRepository,
     TransferRepository originalTransferRepository,
     WorldEnvelopeRepository worldEnvelopeRepository,
     VehicleParkingRepository vehicleParkingRepository,
@@ -263,7 +263,7 @@ public class GraphSerializationTest {
       osmInfoGraphBuildRepository,
       streetDetailsRepository,
       streetRepository,
-      originalTimetableRepository,
+      originalTransitRepository,
       originalTransferRepository,
       worldEnvelopeRepository,
       vehicleParkingRepository,
@@ -274,27 +274,27 @@ public class GraphSerializationTest {
       empiricalDelayRepository,
       null,
       new DefaultGeneralPatternRepository(),
-      new DefaultFareServiceFactory()
+      new GtfsFareServiceFactory()
     );
     serializedObj.save(new FileDataSource(tempFile, FileType.GRAPH));
     SerializedGraphObject deserializedGraph = SerializedGraphObject.load(tempFile);
     Graph copiedGraph1 = deserializedGraph.graph;
-    TimetableRepository copiedTimetableRepository1 = deserializedGraph.timetableRepository;
+    TransitRepository copiedTransitRepository1 = deserializedGraph.transitRepository;
     // Index both graph - we do no know if the original is indexed, because it is cached and
     // might be indexed by other tests.
 
-    originalTimetableRepository.index();
+    originalTransitRepository.index();
     originalGraph.index();
 
-    copiedTimetableRepository1.index();
+    copiedTransitRepository1.index();
     copiedGraph1.index();
 
     assertNoDifferences(originalGraph, copiedGraph1);
 
     SerializedGraphObject deserializedGraph2 = SerializedGraphObject.load(tempFile);
     Graph copiedGraph2 = deserializedGraph2.graph;
-    TimetableRepository copiedTimetableRepository2 = deserializedGraph2.timetableRepository;
-    copiedTimetableRepository2.index();
+    TransitRepository copiedTransitRepository2 = deserializedGraph2.transitRepository;
+    copiedTransitRepository2.index();
     copiedGraph2.index();
     assertNoDifferences(copiedGraph1, copiedGraph2);
   }
@@ -316,7 +316,9 @@ public class GraphSerializationTest {
       .build();
     repository.addEmpiricalDelayServiceCalendar(FEED_ID, cal);
     repository.addTripDelays(
-      TripDelays.of(A_TRIP_ID).with("serviceId", List.of(new EmpiricalDelay(2, 19))).build()
+      TripDelays.of(A_TRIP_ID)
+        .with("serviceId", List.of(new EmpiricalDelay(2, 19)))
+        .build()
     );
     return repository;
   }

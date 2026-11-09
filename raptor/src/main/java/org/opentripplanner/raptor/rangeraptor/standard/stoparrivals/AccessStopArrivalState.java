@@ -1,8 +1,8 @@
 package org.opentripplanner.raptor.rangeraptor.standard.stoparrivals;
 
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorTransfer;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
+import org.opentripplanner.raptor.spi.RaptorTransfer;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 import org.opentripplanner.utils.tostring.ToStringBuilder;
 
 /**
@@ -14,7 +14,8 @@ import org.opentripplanner.utils.tostring.ToStringBuilder;
  * well as the default state. There are relatively few access states, so the memory and performance
  * overhead is small.
  */
-public class AccessStopArrivalState<T extends RaptorTripSchedule> implements StopArrivalState<T> {
+public final class AccessStopArrivalState<T extends RaptorTripSchedule> implements
+  StopArrivalState<T> {
 
   private final DefaultStopArrivalState<T> delegate;
   private RaptorAccessEgress accessArriveOnStreet;
@@ -45,11 +46,6 @@ public class AccessStopArrivalState<T extends RaptorTripSchedule> implements Sto
   @Override
   public boolean reachedOnBoard() {
     return delegate.reachedOnBoard();
-  }
-
-  @Override
-  public boolean reachedOnStreet() {
-    return arrivedByAccessOnStreet() || arrivedByTransfer();
   }
 
   @Override
@@ -88,14 +84,14 @@ public class AccessStopArrivalState<T extends RaptorTripSchedule> implements Sto
   }
 
   @Override
-  public int boardStop() {
-    return delegate.boardStop();
+  public int boardStopPosition() {
+    return delegate.boardStopPosition();
   }
 
   @Override
-  public void arriveByTransit(int arrivalTime, int boardStop, int boardTime, T trip) {
+  public void arriveByTransit(int arrivalTime, int boardStopPosition, T trip) {
     accessArriveOnBoard = null;
-    delegate.arriveByTransit(arrivalTime, boardStop, boardTime, trip);
+    delegate.arriveByTransit(arrivalTime, boardStopPosition, trip);
   }
 
   @Override
@@ -143,9 +139,9 @@ public class AccessStopArrivalState<T extends RaptorTripSchedule> implements Sto
   /* package local methods */
 
   void setAccessTime(int time, RaptorAccessEgress access, boolean isOverallBestTime) {
-    this.delegate.setAccessTime(time, isOverallBestTime, access.stopReachedOnBoard());
+    this.delegate.setAccessTime(time, isOverallBestTime, access.arrivedOnBoard());
 
-    if (access.stopReachedOnBoard()) {
+    if (access.arrivedOnBoard()) {
       accessArriveOnBoard = access;
     } else {
       accessArriveOnStreet = access;

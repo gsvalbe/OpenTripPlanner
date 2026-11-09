@@ -1,18 +1,19 @@
 package org.opentripplanner.raptor.rangeraptor.standard.stoparrivals.view;
 
-import static org.opentripplanner.raptor.api.model.PathLegType.ACCESS;
+import static org.opentripplanner.raptor.api.view.PathLegType.ACCESS;
 
-import org.opentripplanner.raptor.api.model.PathLegType;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorConstants;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
 import org.opentripplanner.raptor.api.view.AccessPathView;
 import org.opentripplanner.raptor.api.view.ArrivalView;
+import org.opentripplanner.raptor.api.view.PathLegType;
+import org.opentripplanner.raptor.spi.RaptorConstants;
 import org.opentripplanner.raptor.spi.RaptorCostCalculator;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 
 final class Access<T extends RaptorTripSchedule>
   extends StopArrivalViewAdapter<T>
-  implements AccessPathView {
+  implements AccessPathView
+{
 
   private final int arrivalTime;
   private final RaptorAccessEgress access;
@@ -60,6 +61,6 @@ final class Access<T extends RaptorTripSchedule>
 
   @Override
   public boolean arrivedOnBoard() {
-    return access.stopReachedOnBoard();
+    return access.arrivedOnBoard();
   }
 }

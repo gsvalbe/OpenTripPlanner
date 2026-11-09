@@ -1,24 +1,23 @@
 package org.opentripplanner.raptor._data.api;
 
-import static org.opentripplanner.raptor.rangeraptor.transit.TripTimesSearch.findTripTimes;
-
 import javax.annotation.Nullable;
 import org.opentripplanner.raptor._data.RaptorTestConstants;
 import org.opentripplanner.raptor._data.transit.TestAccessEgress;
 import org.opentripplanner.raptor._data.transit.TestTransfer;
 import org.opentripplanner.raptor._data.transit.TestTripPattern;
 import org.opentripplanner.raptor._data.transit.TestTripSchedule;
-import org.opentripplanner.raptor.api.model.RaptorConstants;
-import org.opentripplanner.raptor.api.model.RaptorStopNameResolver;
 import org.opentripplanner.raptor.api.path.RaptorPath;
 import org.opentripplanner.raptor.path.PathBuilder;
+import org.opentripplanner.raptor.spi.BoardAndAlightTime;
+import org.opentripplanner.raptor.spi.RaptorConstants;
 import org.opentripplanner.raptor.spi.RaptorCostCalculator;
 import org.opentripplanner.raptor.spi.RaptorSlackProvider;
+import org.opentripplanner.raptor.spi.RaptorStopNameResolver;
 import org.opentripplanner.raptor.spi.TestSlackProvider;
 
 /**
  * Utility to help build paths for testing. The path builder is "reusable", every time the {@code
- * access(...)} methods are called the builder reset it self.
+ * access(...)} methods are called the builder reset itself.
  * <p>
  * If the {@code costCalculator} is null, paths will not include cost.
  */
@@ -63,11 +62,6 @@ public class TestPathBuilder implements RaptorTestConstants {
     return access(startTime, TestAccessEgress.walk(toStop, duration));
   }
 
-  /** Same as {@link #access(int, int, int)} , but with a free access - duration is 0s. */
-  public TestPathBuilder access(int startTime, int toStop) {
-    return access(startTime, TestAccessEgress.free(toStop));
-  }
-
   /**
    * Create access with the given {@code startTime}, but allow the access to be time-shifted
    * according to the opening hours of the given {@code transfer}.
@@ -76,10 +70,6 @@ public class TestPathBuilder implements RaptorTestConstants {
     reset(startTime);
     builder.access(transfer);
     return this;
-  }
-
-  public TestPathBuilder walk(int duration, int toStop) {
-    return walk(TestTransfer.transfer(toStop, duration));
   }
 
   public TestPathBuilder walk(int duration, int toStop, int cost) {
@@ -93,10 +83,13 @@ public class TestPathBuilder implements RaptorTestConstants {
 
   public TestPathBuilder bus(TestTripSchedule trip, int alightStop) {
     int boardStop = currentStop();
-    // We use the startTime as earliest-board-time, this may cause problems for
-    // testing routes visiting the same stop more than once. Create a new factory
-    // method if this happens.
-    var baTime = findTripTimes(trip, boardStop, alightStop, startTime);
+    // We use the last leg arrival-time as the earliest-board-time; this may cause problems for
+    // testing circular routes. Create a new factory method if this happens.
+    int boardStopPosition = trip.findDepartureStopPosition(currentArrivalTime(), boardStop);
+    int alightStopPosition = trip
+      .pattern()
+      .findAlightStopPositionAfter(boardStopPosition, alightStop);
+    var baTime = new BoardAndAlightTime(trip, boardStopPosition, alightStopPosition);
     builder.transit(trip, baTime);
     return this;
   }
@@ -123,11 +116,6 @@ public class TestPathBuilder implements RaptorTestConstants {
     );
   }
 
-  public PathBuilder<TestTripSchedule> access(TestAccessEgress access) {
-    builder.access(access);
-    return builder;
-  }
-
   public RaptorPath<TestTripSchedule> egress(TestAccessEgress egress) {
     builder.egress(egress);
     builder.c2(c2);
@@ -138,6 +126,10 @@ public class TestPathBuilder implements RaptorTestConstants {
 
   int currentStop() {
     return builder.tail().toStop();
+  }
+
+  int currentArrivalTime() {
+    return builder.tail().toTime();
   }
 
   private void reset(int startTime) {

@@ -23,12 +23,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.opentripplanner.TestServerContext;
 import org.opentripplanner._support.time.ZoneIds;
 import org.opentripplanner.api.model.transit.DefaultFeedIdMapper;
+import org.opentripplanner.apis.support.InvalidInputException;
 import org.opentripplanner.apis.support.graphql.DataFetchingSupport;
 import org.opentripplanner.apis.transmodel.TransmodelRequestContext;
-import org.opentripplanner.ext.fares.service.gtfs.v1.DefaultFareService;
 import org.opentripplanner.model.calendar.CalendarServiceData;
 import org.opentripplanner.model.plan.Itinerary;
 import org.opentripplanner.model.plan.Leg;
@@ -39,33 +38,35 @@ import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.preference.StreetPreferences;
 import org.opentripplanner.routing.api.request.preference.TimeSlopeSafetyTriangle;
 import org.opentripplanner.routing.api.request.via.ViaLocation;
+import org.opentripplanner.routing.linking.VertexLinkerTestFactory;
+import org.opentripplanner.standalone.api.TestServerContext;
 import org.opentripplanner.street.graph.Graph;
 import org.opentripplanner.street.model.StreetMode;
 import org.opentripplanner.street.model.VehicleRoutingOptimizeType;
 import org.opentripplanner.transfer.regular.TransferRepository;
 import org.opentripplanner.transfer.regular.TransferServiceTestFactory;
-import org.opentripplanner.transit.model._data.TimetableRepositoryForTest;
+import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.site.StopLocation;
-import org.opentripplanner.transit.service.TimetableRepository;
+import org.opentripplanner.transit.service.TransitRepository;
 
 public class TripRequestMapperTest implements PlanTestConstants {
 
-  private static final TimetableRepositoryForTest TEST_MODEL = TimetableRepositoryForTest.of();
+  private static final TransitRepositoryForTest TEST_MODEL = TransitRepositoryForTest.of();
   private static final Duration MAX_FLEXIBLE = Duration.ofMinutes(20);
   private static final Function<StopLocation, String> STOP_TO_ID = s -> s.getId().toString();
 
-  private static final Route ROUTE1 = TimetableRepositoryForTest.route("route1").build();
-  private static final Route ROUTE2 = TimetableRepositoryForTest.route("route2").build();
+  private static final Route ROUTE1 = TransitRepositoryForTest.route("route1").build();
+  private static final Route ROUTE2 = TransitRepositoryForTest.route("route2").build();
 
   private static final RegularStop STOP1 = TEST_MODEL.stop("ST:stop1", 1, 1).build();
   private static final RegularStop STOP2 = TEST_MODEL.stop("ST:stop2", 2, 1).build();
   private static final RegularStop STOP3 = TEST_MODEL.stop("ST:stop3", 3, 1).build();
 
   private static final Graph GRAPH = new Graph();
-  private static final TimetableRepository TIMETABLE_REPOSITORY;
+  private static final TransitRepository TIMETABLE_REPOSITORY;
   private static final TransferRepository TRANSFER_REPOSITORY;
   private static final Map.Entry<String, Object> ARGUMENT_FROM = entry(
     "from",
@@ -92,7 +93,7 @@ public class TripRequestMapperTest implements PlanTestConstants {
       .build();
 
     TRANSFER_REPOSITORY = TransferServiceTestFactory.defaultTransferRepository();
-    TIMETABLE_REPOSITORY = new TimetableRepository(siteRepository);
+    TIMETABLE_REPOSITORY = new TransitRepository(siteRepository);
     TIMETABLE_REPOSITORY.initTimeZone(ZoneIds.STOCKHOLM);
     var calendarServiceData = new CalendarServiceData();
     LocalDate serviceDate = itinerary.startTime().toLocalDate();
@@ -103,7 +104,7 @@ public class TripRequestMapperTest implements PlanTestConstants {
         .getTripTimes()
         .getFirst()
         .getServiceCode();
-      TIMETABLE_REPOSITORY.getServiceCodes().put(pattern.getId(), serviceCode);
+      TIMETABLE_REPOSITORY.putServiceCode(pattern.getId(), serviceCode);
       calendarServiceData.putServiceDatesForServiceId(pattern.getId(), List.of(serviceDate));
     });
 
@@ -127,20 +128,25 @@ public class TripRequestMapperTest implements PlanTestConstants {
       )
       .buildDefault();
 
-    var otpServerRequestContext = TestServerContext.createServerContext(
-      GRAPH,
+    var transitService = TestServerContext.createTransitService(
       TIMETABLE_REPOSITORY,
-      TRANSFER_REPOSITORY,
-      new DefaultFareService(),
-      null,
-      defaultRequest
+      TRANSFER_REPOSITORY
     );
+    var vertexLinker = VertexLinkerTestFactory.of(GRAPH);
 
     context = new TransmodelRequestContext(
-      otpServerRequestContext,
-      otpServerRequestContext.routingService(),
-      otpServerRequestContext.transitService(),
-      otpServerRequestContext.empiricalDelayService()
+      TestServerContext.createRoutingService(GRAPH, transitService, TRANSFER_REPOSITORY),
+      transitService,
+      null,
+      null,
+      defaultRequest,
+      TestServerContext.createVehicleRentalService(),
+      TestServerContext.createVehicleParkingService(),
+      GRAPH,
+      TransferServiceTestFactory.transferService(TRANSFER_REPOSITORY),
+      TestServerContext.createStreetDetailsService(),
+      TestServerContext.createLinkingContextFactory(GRAPH, vertexLinker, transitService),
+      TestServerContext.createStreetLimitationParametersService()
     );
   }
 
@@ -210,11 +216,11 @@ public class TripRequestMapperTest implements PlanTestConstants {
 
     Map<String, Object> arguments = arguments("maxAccessEgressDurationForMode", duration);
 
-    var ex = assertThrows(IllegalArgumentException.class, () ->
+    var ex = assertThrows(InvalidInputException.class, () ->
       MAPPER.createRequest(executionContext(arguments))
     );
     assertEquals(
-      "Invalid duration for mode WALK. The value 45m1s is not greater than the default 45m.",
+      "Invalid duration for mode WALK. The value 45m1s is greater than the default 45m.",
       ex.getMessage()
     );
   }
@@ -225,11 +231,11 @@ public class TripRequestMapperTest implements PlanTestConstants {
       "maxAccessEgressDurationForMode",
       List.of(Map.of("streetMode", StreetMode.FLEXIBLE, "duration", MAX_FLEXIBLE.plusSeconds(1)))
     );
-    var ex = assertThrows(IllegalArgumentException.class, () ->
+    var ex = assertThrows(InvalidInputException.class, () ->
       MAPPER.createRequest(executionContext(arguments))
     );
     assertEquals(
-      "Invalid duration for mode FLEXIBLE. The value 20m1s is not greater than the default 20m.",
+      "Invalid duration for mode FLEXIBLE. The value 20m1s is greater than the default 20m.",
       ex.getMessage()
     );
   }
@@ -243,11 +249,11 @@ public class TripRequestMapperTest implements PlanTestConstants {
 
     Map<String, Object> arguments = arguments("maxDirectDurationForMode", duration);
 
-    var ex = assertThrows(IllegalArgumentException.class, () ->
+    var ex = assertThrows(InvalidInputException.class, () ->
       MAPPER.createRequest(executionContext(arguments))
     );
     assertEquals(
-      "Invalid duration for mode WALK. The value 4h1s is not greater than the default 4h.",
+      "Invalid duration for mode WALK. The value 4h1s is greater than the default 4h.",
       ex.getMessage()
     );
   }
@@ -258,11 +264,11 @@ public class TripRequestMapperTest implements PlanTestConstants {
       "maxDirectDurationForMode",
       List.of(Map.of("streetMode", StreetMode.FLEXIBLE, "duration", MAX_FLEXIBLE.plusSeconds(1)))
     );
-    var ex = assertThrows(IllegalArgumentException.class, () ->
+    var ex = assertThrows(InvalidInputException.class, () ->
       MAPPER.createRequest(executionContext(arguments))
     );
     assertEquals(
-      "Invalid duration for mode FLEXIBLE. The value 20m1s is not greater than the default 20m.",
+      "Invalid duration for mode FLEXIBLE. The value 20m1s is greater than the default 20m.",
       ex.getMessage()
     );
   }
@@ -405,6 +411,31 @@ public class TripRequestMapperTest implements PlanTestConstants {
     Map<String, Object> arguments = arguments(name, 101);
     var req = MAPPER.createRequest(executionContext(arguments));
     assertEquals(Duration.ofSeconds(101), req.preferences().transfer().slack());
+  }
+
+  @Test
+  void testOnBoardLocation() {
+    var fromWithOnBoardLocation = Map.of(
+      "serviceJourneyLocation",
+      Map.of(
+        "datedServiceJourneyReference",
+        Map.of(
+          "serviceJourneyOnServiceDate",
+          Map.of("serviceJourneyId", "F:T1", "serviceDate", LocalDate.of(2024, 11, 1))
+        ),
+        "pointInJourneyPatternReference",
+        Map.of("stopLocationId", "F:stop1")
+      )
+    );
+
+    var arguments = new HashMap<String, Object>();
+    arguments.put("from", fromWithOnBoardLocation);
+    arguments.put("to", Map.of("place", "F:Quay:2"));
+
+    var request = MAPPER.createRequest(executionContext(arguments));
+    var from = request.from();
+    assertNotNull(from);
+    assertNotNull(from.tripLocation());
   }
 
   @Test

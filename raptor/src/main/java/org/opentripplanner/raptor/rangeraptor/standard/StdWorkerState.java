@@ -1,9 +1,9 @@
 package org.opentripplanner.raptor.rangeraptor.standard;
 
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
-import org.opentripplanner.raptor.api.model.TransitArrival;
+import org.opentripplanner.raptor.api.view.TransitArrival;
 import org.opentripplanner.raptor.rangeraptor.internalapi.RaptorWorkerState;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 
 /**
  * This interface define the methods used be the {@link ArrivalTimeRoutingStrategy} to query and
@@ -22,7 +22,7 @@ public interface StdWorkerState<T extends RaptorTripSchedule> extends RaptorWork
   int bestTimePreviousRound(int stop);
 
   /**
-   * See {@link org.opentripplanner.raptor.rangeraptor.internalapi.RoutingStrategy#setAccessToStop(RaptorAccessEgress, int)}.
+   * See {@link org.opentripplanner.raptor.rangeraptor.internalapi.RoutingStrategy#addAccessStopArrival(RaptorAccessEgress, int)}.
    */
   void setAccessToStop(RaptorAccessEgress accessPath, int departureTime);
 
@@ -30,7 +30,7 @@ public interface StdWorkerState<T extends RaptorTripSchedule> extends RaptorWork
    * Set the time at a transit stop iff it is optimal. This sets both the bestTime and the
    * transitTime
    */
-  void transitToStop(int alightStop, int alightTime, int boardStop, int boardTime, T trip);
+  void transitToStop(int alightStop, int alightTime, int boardStopPosition, T trip);
 
   TransitArrival<T> previousTransit(int boardStopIndex);
 }

@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
-import org.opentripplanner.transit.model.basic.WgsBoundingBox;
+import org.opentripplanner.transit.model.network.WgsBoundingBox;
 import org.opentripplanner.transit.model.network.RouteRegion;
 
 class RouteRegionsTest {

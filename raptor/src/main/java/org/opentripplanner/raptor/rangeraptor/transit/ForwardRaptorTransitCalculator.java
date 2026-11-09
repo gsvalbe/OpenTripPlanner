@@ -1,23 +1,24 @@
 package org.opentripplanner.raptor.rangeraptor.transit;
 
 import java.util.Iterator;
-import org.opentripplanner.raptor.api.model.RaptorConstants;
-import org.opentripplanner.raptor.api.model.RaptorTransfer;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
-import org.opentripplanner.raptor.api.model.SearchDirection;
 import org.opentripplanner.raptor.api.request.RaptorTuningParameters;
 import org.opentripplanner.raptor.api.request.SearchParams;
 import org.opentripplanner.raptor.spi.IntIterator;
+import org.opentripplanner.raptor.spi.IntIterators;
+import org.opentripplanner.raptor.spi.RaptorConstants;
 import org.opentripplanner.raptor.spi.RaptorConstrainedBoardingSearch;
 import org.opentripplanner.raptor.spi.RaptorTimeTable;
+import org.opentripplanner.raptor.spi.RaptorTransfer;
 import org.opentripplanner.raptor.spi.RaptorTransitDataProvider;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 import org.opentripplanner.raptor.spi.RaptorTripScheduleSearch;
-import org.opentripplanner.raptor.util.IntIterators;
+import org.opentripplanner.raptor.spi.SearchDirection;
 import org.opentripplanner.utils.time.TimeUtils;
 
 public final class ForwardRaptorTransitCalculator<T extends RaptorTripSchedule>
   extends ForwardTransitCalculator<T>
-  implements RaptorTransitCalculator<T> {
+  implements RaptorTransitCalculator<T>
+{
 
   private final int earliestDepartureTime;
   private final int searchWindowInSeconds;
@@ -41,9 +42,10 @@ public final class ForwardRaptorTransitCalculator<T extends RaptorTripSchedule>
   ) {
     this.earliestDepartureTime = earliestDepartureTime;
     this.searchWindowInSeconds = searchWindowInSeconds;
-    this.latestAcceptableArrivalTime = latestAcceptableArrivalTime == RaptorConstants.TIME_NOT_SET
-      ? unreachedTime()
-      : latestAcceptableArrivalTime;
+    this.latestAcceptableArrivalTime =
+      latestAcceptableArrivalTime == RaptorConstants.TIME_NOT_SET
+        ? unreachedTime()
+        : latestAcceptableArrivalTime;
     this.iterationStep = iterationStep;
   }
 

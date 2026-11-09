@@ -20,6 +20,7 @@ import java.time.ZoneId;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -28,6 +29,8 @@ import java.util.stream.Stream;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.opentripplanner.api.model.transit.FeedScopedIdMapper;
+import org.opentripplanner.apis.support.InvalidInputException;
+import org.opentripplanner.apis.transmodel.mapping.TripTimeOnDateFilterMapper;
 import org.opentripplanner.apis.transmodel.model.EnumTypes;
 import org.opentripplanner.apis.transmodel.model.TransmodelTransportSubmode;
 import org.opentripplanner.apis.transmodel.model.framework.TransmodelDirectives;
@@ -35,15 +38,15 @@ import org.opentripplanner.apis.transmodel.model.plan.JourneyWhiteListed;
 import org.opentripplanner.apis.transmodel.support.GqlUtil;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.framework.graphql.GraphQLUtils;
-import org.opentripplanner.model.StopTimesInPattern;
-import org.opentripplanner.model.TripTimeOnDate;
+import org.opentripplanner.transit.api.request.CancellationPolicy;
+import org.opentripplanner.transit.api.request.TripTimeOnDateRequest;
 import org.opentripplanner.transit.model.basic.SubMode;
 import org.opentripplanner.transit.model.basic.TransitMode;
+import org.opentripplanner.transit.model.framework.TransitEntity;
 import org.opentripplanner.transit.model.site.MultiModalStation;
 import org.opentripplanner.transit.model.site.Station;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.model.site.StopLocationsGroup;
-import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.service.ArrivalDeparture;
 import org.opentripplanner.transit.service.TransitService;
 
@@ -105,9 +108,9 @@ public class StopPlaceType {
               .build()
           )
           .dataFetcher(environment ->
-            (((MonoOrMultiModalStation) environment.getSource()).getName().toString(
-                GqlUtil.getLocale(environment)
-              ))
+            ((MonoOrMultiModalStation) environment.getSource())
+              .getName()
+              .toString(GqlUtil.getLocale(environment))
           )
           .build()
       )
@@ -115,18 +118,14 @@ public class StopPlaceType {
         GraphQLFieldDefinition.newFieldDefinition()
           .name("latitude")
           .type(Scalars.GraphQLFloat)
-          .dataFetcher(environment ->
-            (((MonoOrMultiModalStation) environment.getSource()).getLat())
-          )
+          .dataFetcher(environment -> ((MonoOrMultiModalStation) environment.getSource()).getLat())
           .build()
       )
       .field(
         GraphQLFieldDefinition.newFieldDefinition()
           .name("longitude")
           .type(Scalars.GraphQLFloat)
-          .dataFetcher(environment ->
-            (((MonoOrMultiModalStation) environment.getSource()).getLon())
-          )
+          .dataFetcher(environment -> ((MonoOrMultiModalStation) environment.getSource()).getLon())
           .build()
       )
       .field(
@@ -176,7 +175,8 @@ public class StopPlaceType {
           .description("The transport modes of quays under this stop place.")
           .type(new GraphQLList(EnumTypes.TRANSPORT_MODE))
           .dataFetcher(environment ->
-            ((MonoOrMultiModalStation) environment.getSource()).getChildStops()
+            ((MonoOrMultiModalStation) environment.getSource())
+              .getChildStops()
               .stream()
               .map(StopLocation::getVehicleType)
               .filter(Objects::nonNull)
@@ -190,7 +190,8 @@ public class StopPlaceType {
           .description("The transport submode serviced by this stop place.")
           .type(new GraphQLList(EnumTypes.TRANSPORT_SUBMODE))
           .dataFetcher(environment ->
-            ((MonoOrMultiModalStation) environment.getSource()).getChildStops()
+            ((MonoOrMultiModalStation) environment.getSource())
+              .getChildStops()
               .stream()
               .map(StopLocation::getNetexVehicleSubmode)
               .filter(it -> it != SubMode.UNKNOWN)
@@ -252,7 +253,7 @@ public class StopPlaceType {
           .description("Returns parent stop for this stop")
           .type(new GraphQLTypeReference(NAME))
           .dataFetcher(environment ->
-            (((MonoOrMultiModalStation) environment.getSource()).getParentStation())
+            ((MonoOrMultiModalStation) environment.getSource()).getParentStation()
           )
           .build()
       )
@@ -261,10 +262,13 @@ public class StopPlaceType {
           .name("tariffZones")
           .type(new GraphQLNonNull(new GraphQLList(tariffZoneType)))
           .dataFetcher(environment ->
-            ((MonoOrMultiModalStation) environment.getSource()).getChildStops()
+            ((MonoOrMultiModalStation) environment.getSource())
+              .getChildStops()
               .stream()
               .flatMap(s -> s.getFareZones().stream())
-              .collect(Collectors.toSet())
+              .distinct()
+              .sorted(TransitEntity.idComparator())
+              .toList()
           )
           .build()
       )
@@ -321,11 +325,11 @@ public class StopPlaceType {
           .argument(
             GraphQLArgument.newArgument()
               .name("whiteListed")
-              .description("Whitelisted")
               .description(
                 "Parameters for indicating the only authorities and/or lines or quays to list estimatedCalls for"
               )
               .type(JourneyWhiteListed.INPUT_TYPE)
+              .deprecate("Use 'filters' instead.")
               .build()
           )
           .argument(
@@ -333,6 +337,18 @@ public class StopPlaceType {
               .name("whiteListedModes")
               .description("Only show estimated calls for selected modes.")
               .type(GraphQLList.list(EnumTypes.TRANSPORT_MODE))
+              .deprecate("Use 'filters' instead.")
+              .build()
+          )
+          .argument(
+            GraphQLArgument.newArgument()
+              .name("filters")
+              .description(
+                "A list of filters for which estimated calls should be included. " +
+                  "An estimated call will be included if it matches with at least one filter. " +
+                  "An empty list is not allowed. Omit the parameter to include all estimated calls."
+              )
+              .type(GraphQLList.list(new GraphQLNonNull(EstimatedCallFilterInputType.INPUT_TYPE)))
               .build()
           )
           .argument(
@@ -354,40 +370,47 @@ public class StopPlaceType {
             Duration timeRange = Duration.ofSeconds(timeRangeInput);
 
             MonoOrMultiModalStation monoOrMultiModalStation = environment.getSource();
-            JourneyWhiteListed whiteListed = new JourneyWhiteListed(environment, idMapper);
-            Collection<TransitMode> transitModes = environment.getArgument("whiteListedModes");
 
             Instant startTime = environment.containsArgument("startTime")
               ? Instant.ofEpochMilli(environment.getArgument("startTime"))
               : Instant.now();
 
-            Stream<TripTimeOnDate> tripTimeOnDateStream = monoOrMultiModalStation
-              .getChildStops()
-              .stream()
-              .flatMap(singleStop ->
-                getTripTimesForStop(
-                  singleStop,
-                  startTime,
-                  timeRange,
-                  arrivalDeparture,
-                  includeCancelledTrips,
-                  numberOfDepartures,
-                  departuresPerLineAndDestinationDisplay,
-                  whiteListed.authorityIds,
-                  whiteListed.lineIds,
-                  transitModes,
-                  environment
-                )
+            List<Map<String, ?>> filtersInput = environment.getArgument("filters");
+            JourneyWhiteListed whiteListed = new JourneyWhiteListed(environment, idMapper);
+            Collection<TransitMode> transitModes = EstimatedCallHelper.getWhitelistedModes(
+              environment.getArgument("whiteListedModes")
+            );
+
+            var requestBuilder = TripTimeOnDateRequest.of(monoOrMultiModalStation.getChildStops())
+              .withTime(startTime)
+              .withTimeWindow(timeRange)
+              .withArrivalDeparture(arrivalDeparture)
+              .withNumberOfDepartures(numberOfDepartures)
+              .withCancellationPolicy(
+                includeCancelledTrips
+                  ? CancellationPolicy.INCLUDE_CANCELLATIONS
+                  : CancellationPolicy.NO_CANCELLATIONS
               );
 
-            return limitPerLineAndDestinationDisplay(
-              tripTimeOnDateStream,
+            if (filtersInput != null) {
+              var mapper = new TripTimeOnDateFilterMapper(idMapper);
+              requestBuilder.withTransitFilters(mapper.mapFilters(filtersInput));
+            }
+            requestBuilder
+              .withIncludeAgencies(
+                whiteListed.authorityIds.isEmpty() ? null : whiteListed.authorityIds
+              )
+              .withIncludeRoutes(whiteListed.lineIds.isEmpty() ? null : whiteListed.lineIds)
+              .withIncludeModes(transitModes);
+
+            var tripTimes = GqlUtil.getTransitService(environment).findTripTimesOnDate(
+              requestBuilder.build()
+            );
+
+            return EstimatedCallHelper.limitPerLineAndDestinationDisplay(
+              tripTimes,
               departuresPerLineAndDestinationDisplay
-            )
-              .sorted(TripTimeOnDate.compareByDeparture())
-              .distinct()
-              .limit(numberOfDepartures)
-              .collect(Collectors.toList());
+            );
           })
           .build()
       )
@@ -399,82 +422,13 @@ public class StopPlaceType {
           )
           .type(new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(ptSituationElementType))))
           .dataFetcher(env ->
-            GqlUtil.getTransitService(env)
-              .getTransitAlertService()
-              .getStopAlerts(((MonoOrMultiModalStation) env.getSource()).getId())
+            GqlUtil.getTransitAlertService(env).getStopAlerts(
+              ((MonoOrMultiModalStation) env.getSource()).getId()
+            )
           )
           .build()
       )
       .build();
-  }
-
-  public static Stream<TripTimeOnDate> getTripTimesForStop(
-    StopLocation stop,
-    Instant startTimeSeconds,
-    Duration timeRange,
-    ArrivalDeparture arrivalDeparture,
-    boolean includeCancelledTrips,
-    int numberOfDeparturesPerPattern,
-    Integer departuresPerLineAndDestinationDisplay,
-    Collection<FeedScopedId> authorityIdsWhiteListed,
-    Collection<FeedScopedId> lineIdsWhiteListed,
-    Collection<TransitMode> transitModes,
-    DataFetchingEnvironment environment
-  ) {
-    TransitService transitService = GqlUtil.getTransitService(environment);
-
-    List<StopTimesInPattern> stopTimesInPatterns = transitService.findStopTimesInPattern(
-      stop,
-      startTimeSeconds,
-      timeRange,
-      numberOfDeparturesPerPattern,
-      arrivalDeparture,
-      includeCancelledTrips
-    );
-
-    Stream<StopTimesInPattern> stopTimesStream = stopTimesInPatterns.stream();
-
-    if (transitModes != null && !transitModes.isEmpty()) {
-      stopTimesStream = stopTimesStream.filter(it -> transitModes.contains(it.pattern.getMode()));
-    }
-
-    Stream<TripTimeOnDate> tripTimesStream = stopTimesStream.flatMap(p -> p.times.stream());
-
-    tripTimesStream = JourneyWhiteListed.whiteListAuthoritiesAndOrLines(
-      tripTimesStream,
-      authorityIdsWhiteListed,
-      lineIdsWhiteListed
-    );
-
-    return limitPerLineAndDestinationDisplay(
-      tripTimesStream,
-      departuresPerLineAndDestinationDisplay
-    );
-  }
-
-  private static Stream<TripTimeOnDate> limitPerLineAndDestinationDisplay(
-    Stream<TripTimeOnDate> tripTimesStream,
-    Integer departuresPerLineAndDestinationDisplay
-  ) {
-    boolean limitOnDestinationDisplay =
-      departuresPerLineAndDestinationDisplay != null && departuresPerLineAndDestinationDisplay > 0;
-
-    if (limitOnDestinationDisplay) {
-      // Group by line and destination display, limit departures per group and merge
-      return tripTimesStream
-        .collect(Collectors.groupingBy(StopPlaceType::destinationDisplayPerLine))
-        .values()
-        .stream()
-        .flatMap(tripTimes ->
-          tripTimes
-            .stream()
-            .sorted(TripTimeOnDate.compareByDeparture())
-            .distinct()
-            .limit(departuresPerLineAndDestinationDisplay)
-        );
-    } else {
-      return tripTimesStream;
-    }
   }
 
   public static MonoOrMultiModalStation fetchStopPlaceById(
@@ -568,7 +522,7 @@ public class StopPlaceType {
       });
       return result;
     } else {
-      throw new IllegalArgumentException("Unexpected multiModalMode: " + multiModalMode);
+      throw new InvalidInputException("Unexpected multiModalMode: " + multiModalMode);
     }
   }
 
@@ -582,11 +536,5 @@ public class StopPlaceType {
       }
     }
     return false;
-  }
-
-  private static String destinationDisplayPerLine(TripTimeOnDate t) {
-    Trip trip = t.getTrip();
-    String headsign = t.getHeadsign() != null ? t.getHeadsign().toString() : null;
-    return trip == null ? headsign : trip.getRoute().getId() + "|" + headsign;
   }
 }

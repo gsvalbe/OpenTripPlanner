@@ -3,11 +3,12 @@ package org.opentripplanner.raptor._data.stoparrival;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.opentripplanner.raptor._data.stoparrival.TestArrivals.access;
 import static org.opentripplanner.raptor._data.stoparrival.TestArrivals.bus;
+import static org.opentripplanner.raptor._data.stoparrival.TestArrivals.busReverseSearch;
 import static org.opentripplanner.raptor._data.stoparrival.TestArrivals.egress;
 import static org.opentripplanner.raptor._data.stoparrival.TestArrivals.transfer;
 import static org.opentripplanner.raptor._data.transit.TestTripPattern.pattern;
-import static org.opentripplanner.raptor.api.model.RaptorCostConverter.toRaptorCost;
-import static org.opentripplanner.raptor.api.model.RaptorTransferConstraint.REGULAR_TRANSFER;
+import static org.opentripplanner.raptor.spi.RaptorCostConverter.toRaptorCost;
+import static org.opentripplanner.raptor.spi.RaptorTransferConstraint.REGULAR_TRANSFER;
 import static org.opentripplanner.utils.time.DurationUtils.durationToStr;
 import static org.opentripplanner.utils.time.TimeUtils.time;
 
@@ -20,8 +21,6 @@ import org.opentripplanner.raptor._data.transit.TestCostCalculator;
 import org.opentripplanner.raptor._data.transit.TestTransfer;
 import org.opentripplanner.raptor._data.transit.TestTripSchedule;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorConstrainedTransfer;
-import org.opentripplanner.raptor.api.model.RaptorTransfer;
 import org.opentripplanner.raptor.api.path.AccessPathLeg;
 import org.opentripplanner.raptor.api.path.EgressPathLeg;
 import org.opentripplanner.raptor.api.path.PathLeg;
@@ -33,7 +32,9 @@ import org.opentripplanner.raptor.path.Path;
 import org.opentripplanner.raptor.rangeraptor.internalapi.WorkerLifeCycle;
 import org.opentripplanner.raptor.rangeraptor.lifecycle.LifeCycleSubscriptions;
 import org.opentripplanner.raptor.rangeraptor.path.DestinationArrival;
+import org.opentripplanner.raptor.spi.RaptorConstrainedTransfer;
 import org.opentripplanner.raptor.spi.RaptorCostCalculator;
+import org.opentripplanner.raptor.spi.RaptorTransfer;
 
 /**
  * This class is used to create a journeys with stop arrivals.
@@ -87,10 +88,7 @@ public class BasicPathTestCase implements RaptorTestConstants {
 
   private static final int BOARD_C1_SEC = 60;
   private static final int TRANSFER_C1_SEC = 120;
-  private static final double[] TRANSIT_RELUCTANCE = new double[] { 1.0 };
-  public static final int TRANSIT_RELUCTANCE_INDEX = 0;
   public static final double WAIT_RELUCTANCE = 0.8;
-  private static final int C2 = 7;
 
   /** Stop cost for stop NA, A, C, E .. H is zero(0), B: 30s, and D: 60s. ?=0, A=1 .. H=8 */
   private static final int[] STOP_C1_S = { 0, 0, 3_000, 0, 6_000, 0, 0, 0, 0, 0 };
@@ -129,7 +127,6 @@ public class BasicPathTestCase implements RaptorTestConstants {
   public static final int TX_DURATION = TX_END - TX_START;
   public static final RaptorTransfer TX_TRANSFER = TestTransfer.transfer(STOP_C, TX_DURATION);
   public static final int TX_C1 = TX_TRANSFER.c1();
-  public static final int TX_C3 = 3;
 
   // Trip 2 (C ~ BUS L21 11:00 11:23 ~ D)
   public static final int L21_START = time("11:00");
@@ -180,11 +177,6 @@ public class BasicPathTestCase implements RaptorTestConstants {
     EGRESS_DURATION,
     EGRESS_C1
   );
-  // this is of course not a real flex egress
-  private static final RaptorAccessEgress FLEX = TestAccessEgress.flex(
-    STOP_E,
-    EGRESS_DURATION
-  ).withCost(EGRESS_C1);
 
   public static final String LINE_11 = "L11";
   public static final String LINE_21 = "L21";
@@ -220,12 +212,6 @@ public class BasicPathTestCase implements RaptorTestConstants {
   public static final int TOTAL_C1 =
     ACCESS_C1 + LINE_11_C1 + TX_C1 + LINE_21_C1 + LINE_31_C1 + EGRESS_C1;
 
-  /** Wait time between trip L11 and L21 including slack */
-  public static final int WAIT_TIME_L11_L21 = L21_START - L11_END - TX_DURATION;
-
-  /** Wait time between trip L21 and L31 including slack */
-  public static final int WAIT_TIME_L21_L31 = L31_START - L21_END;
-
   public static WorkerLifeCycle lifeCycle() {
     return new LifeCycleSubscriptions();
   }
@@ -255,10 +241,34 @@ public class BasicPathTestCase implements RaptorTestConstants {
     ArrivalView<TestTripSchedule> nextArrival, egress;
     nextArrival = access(STOP_E, EGRESS_END, EGRESS_START, EGRESS_C1, EGRESS_C2);
     // Board slack is subtracted from the arrival time to get the latest possible
-    nextArrival = bus(1, STOP_D, L31_START, LINE_31_C1, LINE_31_C2, TRIP_3, nextArrival);
-    nextArrival = bus(2, STOP_C, L21_START, LINE_21_C1, LINE_21_C2, TRIP_2, nextArrival);
+    nextArrival = busReverseSearch(
+      1,
+      STOP_D,
+      L31_START,
+      LINE_31_C1,
+      LINE_31_C2,
+      TRIP_3,
+      nextArrival
+    );
+    nextArrival = busReverseSearch(
+      2,
+      STOP_C,
+      L21_START,
+      LINE_21_C1,
+      LINE_21_C2,
+      TRIP_2,
+      nextArrival
+    );
     nextArrival = transfer(2, STOP_B, TX_END, TX_START, TX_C1, nextArrival);
-    nextArrival = bus(3, STOP_A, L11_START, LINE_11_C1, LINE_11_C2, TRIP_1, nextArrival);
+    nextArrival = busReverseSearch(
+      3,
+      STOP_A,
+      L11_START,
+      LINE_11_C1,
+      LINE_11_C2,
+      TRIP_1,
+      nextArrival
+    );
     egress = egress(ACCESS_END, ACCESS_START, ACCESS_C1, ACCESS_C2, nextArrival);
     return new DestinationArrival<>(
       egress.egressPath().egress(),
@@ -284,8 +294,8 @@ public class BasicPathTestCase implements RaptorTestConstants {
       TRIP_3,
       L31_START,
       L31_END,
-      TRIP_3.findDepartureStopPosition(L31_START, STOP_D),
-      TRIP_3.findArrivalStopPosition(L31_END, STOP_E),
+      STOP_POS_0,
+      STOP_POS_1,
       EMPTY_CONSTRAINTS,
       LINE_31_C1,
       leg6
@@ -294,8 +304,8 @@ public class BasicPathTestCase implements RaptorTestConstants {
       TRIP_2,
       L21_START,
       L21_END,
-      TRIP_2.findDepartureStopPosition(L21_START, STOP_C),
-      TRIP_2.findArrivalStopPosition(L21_END, STOP_D),
+      STOP_POS_0,
+      STOP_POS_1,
       EMPTY_CONSTRAINTS,
       LINE_21_C1,
       leg5
@@ -313,8 +323,8 @@ public class BasicPathTestCase implements RaptorTestConstants {
       TRIP_1,
       L11_START,
       L11_END,
-      TRIP_1.findDepartureStopPosition(L11_START, STOP_A),
-      TRIP_1.findArrivalStopPosition(L11_END, STOP_B),
+      STOP_POS_0,
+      STOP_POS_1,
       EMPTY_CONSTRAINTS,
       LINE_11_C1,
       leg3
@@ -327,37 +337,6 @@ public class BasicPathTestCase implements RaptorTestConstants {
       leg2.asTransitLeg()
     );
     return new Path<>(RAPTOR_ITERATION_START_TIME, leg1, TOTAL_C1, 7);
-  }
-
-  public static RaptorPath<TestTripSchedule> flexTripAsPath() {
-    PathLeg<TestTripSchedule> leg6 = new EgressPathLeg<>(FLEX, EGRESS_START, EGRESS_END, EGRESS_C1);
-    var transfer = TestTransfer.transfer(STOP_E, TX_END - TX_START);
-    PathLeg<TestTripSchedule> leg3 = new TransferPathLeg<>(
-      STOP_B,
-      TX_START,
-      TX_END,
-      transfer.c1(),
-      transfer,
-      leg6
-    );
-    var leg2 = new TransitPathLeg<>(
-      TRIP_1,
-      L11_START,
-      L11_END,
-      TRIP_1.findDepartureStopPosition(L11_START, STOP_A),
-      TRIP_1.findArrivalStopPosition(L11_END, STOP_B),
-      EMPTY_CONSTRAINTS,
-      LINE_11_C1,
-      leg3
-    );
-    AccessPathLeg<TestTripSchedule> leg1 = new AccessPathLeg<>(
-      ACCESS,
-      ACCESS_START,
-      ACCESS_END,
-      ACCESS_C1,
-      leg2.asTransitLeg()
-    );
-    return new Path<>(RAPTOR_ITERATION_START_TIME, leg1, TOTAL_C1, C2);
   }
 
   public static List<Integer> basicTripStops() {

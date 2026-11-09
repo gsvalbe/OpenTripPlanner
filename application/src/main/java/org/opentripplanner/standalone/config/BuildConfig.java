@@ -4,6 +4,7 @@ import static org.opentripplanner.framework.application.OtpFileNames.BUILD_CONFI
 import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V1_5;
 import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_0;
 import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_1;
+import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_10;
 import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_2;
 import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_5;
 import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_7;
@@ -12,16 +13,14 @@ import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.MissingNode;
 import java.net.URI;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import org.opentripplanner.core.model.id.FeedScopedId;
-import org.opentripplanner.core.model.time.LocalDateInterval;
+import org.opentripplanner.core.model.time.LocalDateRange;
 import org.opentripplanner.datastore.api.OtpDataStoreConfig;
 import org.opentripplanner.ext.dataoverlay.configuration.DataOverlayConfig;
 import org.opentripplanner.ext.datastore.gs.config.GsConfig;
@@ -33,30 +32,30 @@ import org.opentripplanner.ext.empiricaldelay.parameters.EmpiricalDelayParameter
 import org.opentripplanner.ext.fares.FaresConfiguration;
 import org.opentripplanner.ext.generalpattern.config.GeneralPatternConfig;
 import org.opentripplanner.ext.generalpattern.parameters.GeneralPatternParameters;
-import org.opentripplanner.graph_builder.module.TransferParameters;
+import org.opentripplanner.graph_builder.module.cache.GraphBuildCacheParameters;
 import org.opentripplanner.graph_builder.module.ned.parameter.DemExtractParameters;
 import org.opentripplanner.graph_builder.module.ned.parameter.DemExtractParametersList;
+import org.opentripplanner.graph_builder.module.osm.EdgeNamer;
 import org.opentripplanner.graph_builder.module.osm.parameters.OsmExtractParameters;
 import org.opentripplanner.graph_builder.module.osm.parameters.OsmExtractParametersList;
-import org.opentripplanner.graph_builder.services.osm.EdgeNamer;
+import org.opentripplanner.graph_builder.module.transfer.api.RegularTransferParameters;
 import org.opentripplanner.gtfs.config.GtfsDefaultParameters;
 import org.opentripplanner.netex.config.NetexFeedParameters;
-import org.opentripplanner.routing.api.request.RouteRequest;
+import org.opentripplanner.osm.model.CompoundRefTagGroup;
 import org.opentripplanner.standalone.config.buildconfig.DemConfig;
+import org.opentripplanner.standalone.config.buildconfig.GraphBuildCacheConfig;
 import org.opentripplanner.standalone.config.buildconfig.GtfsConfig;
 import org.opentripplanner.standalone.config.buildconfig.IslandPruningConfig;
 import org.opentripplanner.standalone.config.buildconfig.NetexConfig;
 import org.opentripplanner.standalone.config.buildconfig.OsmConfig;
+import org.opentripplanner.standalone.config.buildconfig.RegularTransferConfig;
 import org.opentripplanner.standalone.config.buildconfig.S3BucketConfig;
-import org.opentripplanner.standalone.config.buildconfig.TransferConfig;
-import org.opentripplanner.standalone.config.buildconfig.TransferRequestConfig;
 import org.opentripplanner.standalone.config.buildconfig.TransitFeedConfig;
 import org.opentripplanner.standalone.config.buildconfig.TransitFeeds;
 import org.opentripplanner.standalone.config.framework.json.NodeAdapter;
 import org.opentripplanner.standalone.config.sandbox.DataOverlayConfigMapper;
 import org.opentripplanner.street.geometry.CompactElevationProfile;
 import org.opentripplanner.street.model.StreetConstants;
-import org.opentripplanner.street.model.StreetMode;
 import org.opentripplanner.utils.lang.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -160,21 +159,21 @@ public class BuildConfig implements OtpDataStoreConfig {
   /** See {@link IslandPruningConfig}. */
   public final IslandPruningConfig islandPruning;
 
-  public final Duration maxTransferDuration;
-  public final Map<StreetMode, TransferParameters> transferParametersForMode;
   public final NetexFeedParameters netexDefaults;
   public final GtfsDefaultParameters gtfsDefaults;
 
   public final DemExtractParameters demDefaults;
   public final OsmExtractParameters osmDefaults;
 
-  public final List<RouteRequest> transferRequests;
+  private final RegularTransferParameters regularTransferParameters;
 
   public final int maxAreaNodes;
 
   public final DataOverlayConfig dataOverlay;
   public final double maxStopToShapeSnapDistance;
   public final Set<String> boardingLocationTags;
+  public final List<CompoundRefTagGroup> elevatorRefTags;
+  private final GraphBuildCacheConfig cache;
   public final DemExtractParametersList dem;
   public final OsmExtractParametersList osm;
   public final EmissionParameters emission;
@@ -186,10 +185,9 @@ public class BuildConfig implements OtpDataStoreConfig {
   public final boolean includeInclinedEdgeLevelInfo;
   public final double distanceBetweenElevationSamples;
   public final double maxElevationPropagationMeters;
-  public final boolean readCachedElevations;
-  public final boolean writeCachedElevations;
   public final boolean includeEllipsoidToGeoidDifference;
   public final boolean multiThreadElevationCalculations;
+  public final int elevationTileCacheSizeMB;
   public final LocalDate transitServiceStart;
   public final LocalDate transitServiceEnd;
   public final ZoneId transitModelTimeZone;
@@ -213,7 +211,7 @@ public class BuildConfig implements OtpDataStoreConfig {
   public BuildConfig(NodeAdapter root, boolean logUnusedParams) {
     this.root = root;
     // Keep this list of BASIC parameters sorted alphabetically on config PARAMETER name
-    areaVisibility = root
+    this.areaVisibility = root
       .of("areaVisibility")
       .since(V1_5)
       .summary("Perform visibility calculations.")
@@ -224,19 +222,20 @@ public class BuildConfig implements OtpDataStoreConfig {
         """
       )
       .asBoolean(false);
-    configVersion = root
+    this.cache = GraphBuildCacheConfig.fromConfig(root);
+    this.configVersion = root
       .of("configVersion")
       .since(V2_1)
       .summary("Deployment version of the *" + BUILD_CONFIG_FILENAME + "*.")
       .description(OtpConfig.CONFIG_VERSION_DESCRIPTION)
       .asString(null);
-    dataImportReport = root
+    this.dataImportReport = root
       .of("dataImportReport")
       .since(V2_0)
       .summary("Generate nice HTML report of Graph errors/warnings")
       .description("The reports are stored in the same location as the graph.")
       .asBoolean(false);
-    distanceBetweenElevationSamples = root
+    this.distanceBetweenElevationSamples = root
       .of("distanceBetweenElevationSamples")
       .since(V2_0)
       .summary("The distance between elevation samples in meters.")
@@ -245,8 +244,8 @@ public class BuildConfig implements OtpDataStoreConfig {
           "be smaller than the horizontal resolution of the height data used."
       )
       .asDouble(CompactElevationProfile.DEFAULT_DISTANCE_BETWEEN_SAMPLES_METERS);
-    elevationBucket = S3BucketConfig.fromConfig(root, "elevationBucket");
-    embedRouterConfig = root
+    this.elevationBucket = S3BucketConfig.fromConfig(root, "elevationBucket");
+    this.embedRouterConfig = root
       .of("embedRouterConfig")
       .since(V2_0)
       .summary(
@@ -254,7 +253,7 @@ public class BuildConfig implements OtpDataStoreConfig {
           "configured over the wire."
       )
       .asBoolean(true);
-    includeEllipsoidToGeoidDifference = root
+    this.includeEllipsoidToGeoidDifference = root
       .of("includeEllipsoidToGeoidDifference")
       .since(V2_0)
       .summary(
@@ -274,9 +273,9 @@ public class BuildConfig implements OtpDataStoreConfig {
       )
       .asBoolean(false);
 
-    islandPruning = IslandPruningConfig.fromConfig(root);
+    this.islandPruning = IslandPruningConfig.fromConfig(root);
 
-    maxDataImportIssuesPerFile = root
+    this.maxDataImportIssuesPerFile = root
       .of("maxDataImportIssuesPerFile")
       .since(V2_0)
       .summary("When to split the import report.")
@@ -287,15 +286,10 @@ public class BuildConfig implements OtpDataStoreConfig {
         """
       )
       .asInt(1000);
-    maxTransferDuration = root
-      .of("maxTransferDuration")
-      .since(V2_1)
-      .summary(
-        "Transfers up to this duration with a mode-specific speed value will be pre-calculated and included in the Graph."
-      )
-      .asDuration(Duration.ofMinutes(30));
-    transferParametersForMode = TransferConfig.map(root, "transferParametersForMode");
-    maxStopToShapeSnapDistance = root
+
+    this.regularTransferParameters = RegularTransferConfig.map(root);
+
+    this.maxStopToShapeSnapDistance = root
       .of("maxStopToShapeSnapDistance")
       .since(V2_1)
       .summary("Maximum distance between route shapes and their stops.")
@@ -307,7 +301,7 @@ public class BuildConfig implements OtpDataStoreConfig {
         """
       )
       .asDouble(150);
-    multiThreadElevationCalculations = root
+    this.multiThreadElevationCalculations = root
       .of("multiThreadElevationCalculations")
       .since(V2_0)
       .summary("Configuring multi-threading during elevation calculations.")
@@ -319,7 +313,22 @@ public class BuildConfig implements OtpDataStoreConfig {
         """
       )
       .asBoolean(false);
-    osmCacheDataInMem = root
+    this.elevationTileCacheSizeMB = root
+      .of("elevationTileCacheSizeMB")
+      .since(V2_10)
+      .summary(
+        "Memory budget in megabytes for the Imagen tile cache used during elevation processing."
+      )
+      .description(
+        """
+        Elevation sampling reads pixels from a tiled DEM through Imagen's tile cache. Sizing the
+        cache to fit the DEM working set turns repeated tile decompressions into cache hits.
+        Increase for large DEMs, lower for memory-constrained environments. The cache lives
+        inside the JVM heap and must fit inside `-Xmx`.
+        """
+      )
+      .asInt(100);
+    this.osmCacheDataInMem = root
       .of("osmCacheDataInMem")
       .since(V2_0)
       .summary("If OSM data should be cached in memory during processing.")
@@ -334,41 +343,52 @@ public class BuildConfig implements OtpDataStoreConfig {
         """
       )
       .asBoolean(false);
-    platformEntriesLinking = root
+    this.platformEntriesLinking = root
       .of("platformEntriesLinking")
       .since(V2_0)
-      .summary("Link unconnected entries to public transport platforms.")
-      .asBoolean(false);
-    readCachedElevations = root
-      .of("readCachedElevations")
-      .since(V2_0)
-      .summary("Whether to read cached elevation data.")
+      .summary(
+        "Link stairways, elevators and other entries that fall inside a platform's outline into that platform's walking area."
+      )
       .description(
         """
-        When set to true, the elevation module will attempt to read this file in
-        order to reuse calculations of elevation data for various coordinate sequences instead of
-        recalculating them all over again.
+        Public transport platforms in OSM are usually mapped as an area, but the stairway,
+        elevator or ramp that actually leads onto the platform is frequently mapped as a separate
+        way whose nodes are not shared with the platform's outline - it merely happens to end
+        somewhere geometrically inside of it. Without this option such entries stay disconnected from
+        the platform and can end up unreachable, or force a long detour around the platform
+        boundary to reach.
+
+        When enabled, OTP looks for street vertices that have exactly one non-motorized
+        connection to the rest of the street network - a "stub", such as the top of a staircase.
+        For every platform, it then checks which of these stubs fall inside that platform's
+        outline - not just on its boundary, but anywhere inside it - and links them into the
+        platform's walking area, so people can be routed from the platform to the entrance and
+        back even though OSM never connected them directly.
+
+        Turn this on if platform entrances in your OSM data are commonly mapped this way; leave
+        it off if entrances always share nodes with the platform outline, since the extra
+        street-vertex scan adds a small amount of processing time during graph build.
         """
       )
-      .asBoolean(true);
-    staticParkAndRide = root
+      .asBoolean(false);
+    this.staticParkAndRide = root
       .of("staticParkAndRide")
       .since(V1_5)
       .summary("Whether we should create car P+R stations from OSM data.")
       .asBoolean(true);
-    staticBikeParkAndRide = root
+    this.staticBikeParkAndRide = root
       .of("staticBikeParkAndRide")
       .since(V1_5)
       .summary("Whether we should create bike P+R stations from OSM data.")
       .asBoolean(false);
-    includeInclinedEdgeLevelInfo = root
+    this.includeInclinedEdgeLevelInfo = root
       .of("includeInclinedEdgeLevelInfo")
       .since(V2_9)
       .summary(
         "Whether level info for inclined edges should be stored in the graph for use during runtime."
       )
       .asBoolean(false);
-    subwayAccessTime = root
+    this.subwayAccessTime = root
       .of("subwayAccessTime")
       .since(V1_5)
       .summary(
@@ -396,7 +416,7 @@ public class BuildConfig implements OtpDataStoreConfig {
     {
       // We need a time zone for setting transit service start and end. Getting the wrong time-zone
       // will just shift the period with one day, so the consequences is limited.
-      transitModelTimeZone = root
+      this.transitModelTimeZone = root
         .of("transitModelTimeZone")
         .since(V2_2)
         .summary("Time zone for the graph.")
@@ -405,7 +425,7 @@ public class BuildConfig implements OtpDataStoreConfig {
         )
         .asZoneId(null);
       var confZone = ObjectUtils.ifNotNull(transitModelTimeZone, ZoneId.systemDefault());
-      transitServiceStart = root
+      this.transitServiceStart = root
         .of("transitServiceStart")
         .since(V2_0)
         .summary("Limit the import of transit services to the given START date.")
@@ -421,7 +441,7 @@ public class BuildConfig implements OtpDataStoreConfig {
           """
         )
         .asDateOrRelativePeriod("-P1Y", confZone);
-      transitServiceEnd = root
+      this.transitServiceEnd = root
         .of("transitServiceEnd")
         .since(V2_0)
         .summary("Limit the import of transit services to the given end date.")
@@ -439,7 +459,7 @@ public class BuildConfig implements OtpDataStoreConfig {
         .asDateOrRelativePeriod("P3Y", confZone);
     }
 
-    transitRouteToStationCentroid = root
+    this.transitRouteToStationCentroid = root
       .of("transitRouteToStationCentroid")
       .since(V2_7)
       .summary("List stations that should route to centroid.")
@@ -460,49 +480,19 @@ public class BuildConfig implements OtpDataStoreConfig {
       )
       .asFeedScopedIds(List.of());
 
-    writeCachedElevations = root
-      .of("writeCachedElevations")
-      .since(V2_0)
-      .summary("Reusing elevation data from previous builds")
-      .description(
-        """
-        When set to true, the elevation module will create a file cache for calculated elevation data.
-        Subsequent graph builds can reuse the data in this file.
-
-        After building the graph, a file called `cached_elevations.obj` will be written to the cache
-        directory. By default, this file is not written during graph builds. There is also a graph build
-        parameter called `readCachedElevations` which is set to `true` by default.
-
-        In graph builds, the elevation module will attempt to read the `cached_elevations.obj` file from
-        the cache directory. The cache directory defaults to `/var/otp/cache`, but this can be overridden
-        via the CLI argument `--cache <directory>`. For the same graph build for multiple Northeast US
-        states, the time it took with using this pre-downloaded and precalculated data became roughly 9
-        minutes.
-
-        The cached data is a lookup table where the coordinate sequences of respective street edges are
-        used as keys for calculated data. It is assumed that all of the other input data except for the
-        OpenStreetMap data remains the same between graph builds. Therefore, if the underlying elevation
-        data is changed, or different configuration values for `elevationUnitMultiplier` or
-        `includeEllipsoidToGeoidDifference` are used, then this data becomes invalid and all elevation data
-        should be recalculated. Over time, various edits to OpenStreetMap will cause this cached data to
-        become stale and not include new OSM ways. Therefore, periodic update of this cached data is
-        recommended.
-        """
-      )
-      .asBoolean(false);
-    maxAreaNodes = root
+    this.maxAreaNodes = root
       .of("maxAreaNodes")
       .since(V2_1)
       .summary(
         "Visibility calculations for an area will not be done if there are more nodes than this limit."
       )
       .asInt(StreetConstants.DEFAULT_MAX_AREA_NODES);
-    maxElevationPropagationMeters = root
+    this.maxElevationPropagationMeters = root
       .of("maxElevationPropagationMeters")
       .since(V1_5)
       .summary("The maximum distance to propagate elevation to vertices which have no elevation.")
       .asInt(2000);
-    boardingLocationTags = root
+    this.boardingLocationTags = root
       .of("boardingLocationTags")
       .since(V2_2)
       .summary(
@@ -510,6 +500,28 @@ public class BuildConfig implements OtpDataStoreConfig {
       )
       .description("[Detailed documentation](BoardingLocations.md)")
       .asStringSet(List.copyOf(Set.of("ref")));
+    elevatorRefTags = root
+      .of("elevatorRefTags")
+      .since(V2_10)
+      .summary("Groups of OSM tags whose values are combined into an elevator id.")
+      .description(
+        """
+        Each group is a list of one or more OSM tag keys. If every tag in a group is present
+        on an elevator node/way, their values are joined with ':' (in the given order) into
+        one id. A group with a single tag key produces a plain id. If any tag in a group is
+        missing, that group produces no id. If more than one group is configured, the first
+        one (in the given order) that produces an id is used as the elevator's id."""
+      )
+      .asObjects(List.of(), node ->
+        CompoundRefTagGroup.of(
+          node
+            .of("tagGroup")
+            .since(V2_10)
+            .summary("The ordered OSM tag keys whose values are combined into one id.")
+            .asStringList(List.of())
+            .toArray(String[]::new)
+        )
+      );
 
     var localFileNamePatternsConfig = root
       .of("localFileNamePatterns")
@@ -528,7 +540,7 @@ public class BuildConfig implements OtpDataStoreConfig {
         """
       )
       .asObject();
-    gtfsLocalFilePattern = localFileNamePatternsConfig
+    this.gtfsLocalFilePattern = localFileNamePatternsConfig
       .of("gtfs")
       .since(V2_0)
       .summary("Patterns for matching GTFS zip-files or directories.")
@@ -539,7 +551,7 @@ public class BuildConfig implements OtpDataStoreConfig {
         """
       )
       .asPattern(DEFAULT_GTFS_PATTERN);
-    netexLocalFilePattern = localFileNamePatternsConfig
+    this.netexLocalFilePattern = localFileNamePatternsConfig
       .of("netex")
       .since(V2_0)
       .summary("Patterns for matching NeTEx zip files or directories.")
@@ -550,7 +562,7 @@ public class BuildConfig implements OtpDataStoreConfig {
         """
       )
       .asPattern(DEFAULT_NETEX_PATTERN);
-    osmLocalFilePattern = localFileNamePatternsConfig
+    this.osmLocalFilePattern = localFileNamePatternsConfig
       .of("osm")
       .since(V2_0)
       .summary("Pattern for matching Open Street Map input files.")
@@ -561,7 +573,7 @@ public class BuildConfig implements OtpDataStoreConfig {
         """
       )
       .asPattern(DEFAULT_OSM_PATTERN);
-    demLocalFilePattern = localFileNamePatternsConfig
+    this.demLocalFilePattern = localFileNamePatternsConfig
       .of("dem")
       .since(V2_0)
       .summary("Pattern for matching elevation DEM files.")
@@ -573,19 +585,19 @@ public class BuildConfig implements OtpDataStoreConfig {
       )
       .asPattern(DEFAULT_DEM_PATTERN);
 
-    graph = root
+    this.graph = root
       .of("graph")
       .since(V2_0)
       .summary("URI to the graph object file for reading and writing.")
       .description("The file is created or overwritten if OTP saves the graph to the file.")
       .asUri(null);
-    streetGraph = root
+    this.streetGraph = root
       .of("streetGraph")
       .since(V2_0)
       .summary("URI to the street graph object file for reading and writing.")
       .description("The file is created or overwritten if OTP saves the graph to the file")
       .asUri(null);
-    buildReportDir = root
+    this.buildReportDir = root
       .of("buildReportDir")
       .since(V2_0)
       .summary("URI to the directory where the graph build report should be written to.")
@@ -597,7 +609,7 @@ public class BuildConfig implements OtpDataStoreConfig {
       )
       .asUri(null);
 
-    stopConsolidation = root
+    this.stopConsolidation = root
       .of("stopConsolidationFile")
       .since(V2_5)
       .summary(
@@ -605,16 +617,16 @@ public class BuildConfig implements OtpDataStoreConfig {
       )
       .asUri(null);
 
-    osmDefaults = OsmConfig.mapOsmDefaults(root, "osmDefaults");
-    osm = OsmConfig.mapOsmConfig(root, "osm", osmDefaults);
-    demDefaults = DemConfig.mapDemDefaultsConfig(root, "demDefaults");
-    dem = DemConfig.mapDemConfig(root, "dem", demDefaults);
-    emission = EmissionConfig.mapEmissionsConfig("emission", root);
-    empiricalDelay = EmpiricalDelayConfig.mapEmissionsConfig("empiricalDelay", root);
-    generalPatterns = GeneralPatternConfig.mapGeneralPatternConfig("generalPatterns", root);
-    netexDefaults = NetexConfig.mapNetexDefaultParameters(root, "netexDefaults");
-    gtfsDefaults = GtfsConfig.mapGtfsDefaultParameters(root, "gtfsDefaults");
-    transitFeeds = TransitFeedConfig.mapTransitFeeds(
+    this.osmDefaults = OsmConfig.mapOsmDefaults(root, "osmDefaults");
+    this.osm = OsmConfig.mapOsmConfig(root, "osm", osmDefaults);
+    this.demDefaults = DemConfig.mapDemDefaultsConfig(root, "demDefaults");
+    this.dem = DemConfig.mapDemConfig(root, "dem", demDefaults);
+    this.emission = EmissionConfig.mapEmissionsConfig("emission", root);
+    this.empiricalDelay = EmpiricalDelayConfig.mapEmpiricalDelayConfig("empiricalDelay", root);
+    this.generalPatterns = GeneralPatternConfig.mapGeneralPatternConfig("generalPatterns", root);
+    this.netexDefaults = NetexConfig.mapNetexDefaultParameters(root, "netexDefaults");
+    this.gtfsDefaults = GtfsConfig.mapGtfsDefaultParameters(root, "gtfsDefaults");
+    this.transitFeeds = TransitFeedConfig.mapTransitFeeds(
       root,
       "transitFeeds",
       netexDefaults,
@@ -622,13 +634,11 @@ public class BuildConfig implements OtpDataStoreConfig {
     );
 
     // List of complex parameters
-    fareConfig = FaresConfiguration.fromConfig(root, "fares");
-    edgeNamer = EdgeNamerFactory.fromConfig(root, "osmNaming");
-    dataOverlay = DataOverlayConfigMapper.map(root, "dataOverlay");
+    this.fareConfig = FaresConfiguration.fromConfig(root, "fares");
+    this.edgeNamer = EdgeNamerFactory.fromConfig(root, "osmNaming");
+    this.dataOverlay = DataOverlayConfigMapper.map(root, "dataOverlay");
 
-    transferRequests = TransferRequestConfig.map(root, "transferRequests");
-
-    gsConfig = GsConfig.fromConfig(root, "gsConfig");
+    this.gsConfig = GsConfig.fromConfig(root, "gsConfig");
 
     if (logUnusedParams && LOG.isWarnEnabled()) {
       root.logAllWarnings(LOG::warn);
@@ -643,6 +653,17 @@ public class BuildConfig implements OtpDataStoreConfig {
   @Override
   public GsConfig gsParameters() {
     return gsConfig;
+  }
+
+  public GraphBuildCacheParameters cache() {
+    return cache.toParameters();
+  }
+
+  /**
+   * Create a URI for a resource within the configured cache directory.
+   */
+  public URI cachePath(String resourceName) {
+    return cache.path(resourceName);
   }
 
   @Override
@@ -692,6 +713,12 @@ public class BuildConfig implements OtpDataStoreConfig {
   }
 
   @Override
+  @Nullable
+  public List<URI> cacheFiles() {
+    return cache.files();
+  }
+
+  @Override
   public Pattern gtfsLocalFilePattern() {
     return gtfsLocalFilePattern;
   }
@@ -722,12 +749,16 @@ public class BuildConfig implements OtpDataStoreConfig {
     return root.isEmpty() ? "" : root.toJson();
   }
 
-  public LocalDateInterval getTransitServicePeriod() {
-    return new LocalDateInterval(transitServiceStart, transitServiceEnd);
+  public LocalDateRange getTransitServicePeriod() {
+    return LocalDateRange.ofInclusiveEnd(transitServiceStart, transitServiceEnd);
   }
 
   public List<FeedScopedId> transitRouteToStationCentroid() {
     return transitRouteToStationCentroid;
+  }
+
+  public RegularTransferParameters regularTransferParameters() {
+    return regularTransferParameters;
   }
 
   public int getSubwayAccessTimeSeconds() {

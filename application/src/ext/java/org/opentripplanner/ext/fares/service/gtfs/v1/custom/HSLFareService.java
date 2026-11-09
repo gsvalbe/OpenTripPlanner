@@ -105,8 +105,7 @@ public class HSLFareService extends DefaultFareService {
           ruleSet
             .getRouteOriginDestinations()
             .toString()
-            .indexOf(routeOriginDestination.toString()) !=
-          -1;
+            .indexOf(routeOriginDestination.toString()) != -1;
 
         if (
           isSpecialRoute ||
@@ -119,7 +118,7 @@ public class HSLFareService extends DefaultFareService {
           if (
             !attribute.isTransferDurationSet() ||
             Duration.between(lastRideStartTime, startTime).getSeconds() <
-            attribute.getTransferDuration()
+              attribute.getTransferDuration()
           ) {
             Money newFare = attribute.getPrice();
             if (newFare.lessThan(bestSpecialFare)) {

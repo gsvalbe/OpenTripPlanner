@@ -1,17 +1,17 @@
 package org.opentripplanner.raptor.rangeraptor.transit;
 
-import static org.opentripplanner.raptor.api.model.RaptorConstants.TIME_NOT_SET;
+import static org.opentripplanner.raptor.spi.RaptorConstants.TIME_NOT_SET;
 import static org.opentripplanner.utils.time.TimeUtils.hm2time;
 
 import java.util.Iterator;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorConstants;
-import org.opentripplanner.raptor.api.model.RaptorTransfer;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
 import org.opentripplanner.raptor.spi.IntIterator;
+import org.opentripplanner.raptor.spi.RaptorConstants;
 import org.opentripplanner.raptor.spi.RaptorConstrainedBoardingSearch;
 import org.opentripplanner.raptor.spi.RaptorTimeTable;
+import org.opentripplanner.raptor.spi.RaptorTransfer;
 import org.opentripplanner.raptor.spi.RaptorTransitDataProvider;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 import org.opentripplanner.raptor.spi.RaptorTripScheduleSearch;
 
 /**
@@ -42,8 +42,8 @@ import org.opentripplanner.raptor.spi.RaptorTripScheduleSearch;
  *
  * @param <T> The TripSchedule type defined by the user of the raptor API.
  */
-public interface RaptorTransitCalculator<T extends RaptorTripSchedule>
-  extends TransitCalculator<T> {
+public interface RaptorTransitCalculator<T extends RaptorTripSchedule> extends
+  TransitCalculator<T> {
   /**
    * Return a calculator for test purpose. The following parameters are fixed:
    * <ul>

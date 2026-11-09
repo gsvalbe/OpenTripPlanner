@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes;
 import org.opentripplanner.core.model.accessibility.Accessibility;
 import org.opentripplanner.model.TripTimeOnDate;
-import org.opentripplanner.transit.model._data.TimetableRepositoryForTest;
+import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.network.StopPattern;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.site.RegularStop;
@@ -17,17 +17,17 @@ import org.opentripplanner.transit.model.timetable.TripTimes;
 
 class StoptimeImplTest {
 
-  private static final TimetableRepositoryForTest MODEL = TimetableRepositoryForTest.of();
+  private static final TransitRepositoryForTest MODEL = TransitRepositoryForTest.of();
   private static final RegularStop STOP = MODEL.stop("r1", 60.0, 10.0).build();
-  private static final StopPattern STOP_PATTERN = TimetableRepositoryForTest.stopPattern(
+  private static final StopPattern STOP_PATTERN = TransitRepositoryForTest.stopPattern(
     STOP,
     STOP,
     STOP
   );
-  private static final Trip TRIP = TimetableRepositoryForTest.trip("trip1")
+  private static final Trip TRIP = TransitRepositoryForTest.trip("trip1")
     .withWheelchairBoarding(Accessibility.POSSIBLE)
     .build();
-  private static final TripPattern PATTERN = TimetableRepositoryForTest.tripPattern(
+  private static final TripPattern PATTERN = TransitRepositoryForTest.tripPattern(
     "p",
     TRIP.getRoute()
   )

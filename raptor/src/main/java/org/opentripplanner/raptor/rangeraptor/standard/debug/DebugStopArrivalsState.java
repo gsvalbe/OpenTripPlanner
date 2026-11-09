@@ -2,14 +2,14 @@ package org.opentripplanner.raptor.rangeraptor.standard.debug;
 
 import java.util.Collection;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorTransfer;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
-import org.opentripplanner.raptor.api.model.TransitArrival;
 import org.opentripplanner.raptor.api.path.RaptorPath;
+import org.opentripplanner.raptor.api.view.TransitArrival;
 import org.opentripplanner.raptor.rangeraptor.debug.DebugHandlerFactory;
 import org.opentripplanner.raptor.rangeraptor.internalapi.WorkerLifeCycle;
 import org.opentripplanner.raptor.rangeraptor.standard.internalapi.StopArrivalsState;
 import org.opentripplanner.raptor.rangeraptor.standard.stoparrivals.view.StopsCursor;
+import org.opentripplanner.raptor.spi.RaptorTransfer;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 
 /**
  * The responsibility of this class is to wrap a {@link StopArrivalsState} and notify the {@link
@@ -18,8 +18,8 @@ import org.opentripplanner.raptor.rangeraptor.standard.stoparrivals.view.StopsCu
  *
  * @param <T> The TripSchedule type defined by the user of the raptor API.
  */
-public final class DebugStopArrivalsState<T extends RaptorTripSchedule>
-  implements StopArrivalsState<T> {
+public final class DebugStopArrivalsState<T extends RaptorTripSchedule> implements
+  StopArrivalsState<T> {
 
   private final StopArrivalsState<T> delegate;
   private final StateDebugger<T> debug;
@@ -58,26 +58,19 @@ public final class DebugStopArrivalsState<T extends RaptorTripSchedule>
   public void setNewBestTransitTime(
     int stop,
     int alightTime,
+    int boardStopPosition,
     T trip,
-    int boardStop,
-    int boardTime,
     boolean newBestOverall
   ) {
     debug.dropOldStateAndAcceptNewOnBoardArrival(stop, newBestOverall, () ->
-      delegate.setNewBestTransitTime(stop, alightTime, trip, boardStop, boardTime, newBestOverall)
+      delegate.setNewBestTransitTime(stop, alightTime, boardStopPosition, trip, newBestOverall)
     );
   }
 
   @Override
-  public void rejectNewBestTransitTime(
-    int stop,
-    int alightTime,
-    T trip,
-    int boardStop,
-    int boardTime
-  ) {
-    debug.rejectTransit(stop, alightTime, trip, boardStop, boardTime);
-    delegate.rejectNewBestTransitTime(stop, alightTime, trip, boardStop, boardTime);
+  public void rejectNewBestTransitTime(int stop, int alightTime, int boardStopPosition, T trip) {
+    debug.rejectTransit(stop, alightTime, boardStopPosition, trip);
+    delegate.rejectNewBestTransitTime(stop, alightTime, boardStopPosition, trip);
   }
 
   @Override

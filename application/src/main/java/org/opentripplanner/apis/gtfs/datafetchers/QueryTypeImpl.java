@@ -1,8 +1,6 @@
 package org.opentripplanner.apis.gtfs.datafetchers;
 
-import static org.opentripplanner.apis.gtfs.mapping.AlertCauseMapper.getGraphQLCause;
-import static org.opentripplanner.apis.gtfs.mapping.AlertEffectMapper.getGraphQLEffect;
-import static org.opentripplanner.apis.gtfs.mapping.SeverityMapper.getGraphQLSeverity;
+import static org.opentripplanner.apis.gtfs.support.filter.AlertsFilter.filterAlerts;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimaps;
@@ -28,16 +26,19 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
-import org.opentripplanner.apis.gtfs.GraphQLRequestContext;
 import org.opentripplanner.apis.gtfs.GraphQLUtils;
+import org.opentripplanner.apis.gtfs.GtfsGraphQLRequestContext;
 import org.opentripplanner.apis.gtfs.generated.GraphQLDataFetchers;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLQueryTypeStopsByRadiusArgs;
+import org.opentripplanner.apis.gtfs.mapping.AlertsConnectionFilterMapper;
 import org.opentripplanner.apis.gtfs.mapping.CanceledTripsFilterMapper;
 import org.opentripplanner.apis.gtfs.mapping.routerequest.LegacyRouteRequestMapper;
 import org.opentripplanner.apis.gtfs.mapping.routerequest.RouteRequestMapper;
+import org.opentripplanner.apis.gtfs.model.CanceledTripsSummary;
 import org.opentripplanner.apis.gtfs.model.SearchResultModel;
 import org.opentripplanner.apis.gtfs.support.filter.PatternByDateFilterUtil;
+import org.opentripplanner.apis.gtfs.support.sort.AlertsConnectionOrdering;
 import org.opentripplanner.apis.gtfs.support.time.LocalDateRangeUtil;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.ext.fares.model.FareRuleSet;
@@ -53,18 +54,19 @@ import org.opentripplanner.model.TripTimeOnDate;
 import org.opentripplanner.model.plan.Leg;
 import org.opentripplanner.model.plan.legreference.LegReference;
 import org.opentripplanner.model.plan.legreference.LegReferenceSerializer;
-import org.opentripplanner.routing.alertpatch.EntitySelector;
+import org.opentripplanner.place.NearbyPlaceFinder;
+import org.opentripplanner.place.NearbyStopFinder;
+import org.opentripplanner.place.api.NearbyStop;
+import org.opentripplanner.place.api.PatternAtStop;
+import org.opentripplanner.place.api.PlaceAtDistance;
+import org.opentripplanner.place.api.PlaceType;
 import org.opentripplanner.routing.alertpatch.TransitAlert;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.response.RoutingResponse;
 import org.opentripplanner.routing.core.FareType;
 import org.opentripplanner.routing.error.RoutingValidationException;
 import org.opentripplanner.routing.fares.FareService;
-import org.opentripplanner.routing.graphfinder.GraphFinder;
-import org.opentripplanner.routing.graphfinder.NearbyStop;
-import org.opentripplanner.routing.graphfinder.PatternAtStop;
-import org.opentripplanner.routing.graphfinder.PlaceAtDistance;
-import org.opentripplanner.routing.graphfinder.PlaceType;
+import org.opentripplanner.routing.services.TransitAlertService;
 import org.opentripplanner.service.vehicleparking.VehicleParkingService;
 import org.opentripplanner.service.vehicleparking.model.VehicleParking;
 import org.opentripplanner.service.vehiclerental.VehicleRentalService;
@@ -107,23 +109,31 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
 
   @Override
   public DataFetcher<Agency> agency() {
-    return environment -> {
-      FeedScopedId id = FeedScopedId.parse(
-        new GraphQLTypes.GraphQLQueryTypeAgencyArgs(environment.getArguments()).getGraphQLId()
+    return environment ->
+      mapFeedScopedIdOrNull(
+        new GraphQLTypes.GraphQLQueryTypeAgencyArgs(environment.getArguments()).getGraphQLId(),
+        id -> getTransitService(environment).getAgency(id)
       );
-
-      return getTransitService(environment).getAgency(id);
-    };
   }
 
   @Override
   public DataFetcher<Iterable<TransitAlert>> alerts() {
     return environment -> {
-      Collection<TransitAlert> alerts = getTransitService(environment)
-        .getTransitAlertService()
-        .getAllAlerts();
+      Collection<TransitAlert> alerts = getTransitAlertService(environment).getAllAlerts();
       var args = new GraphQLTypes.GraphQLQueryTypeAlertsArgs(environment.getArguments());
       return filterAlerts(alerts, args);
+    };
+  }
+
+  @Override
+  public DataFetcher<CountedConnection<TransitAlert>> alertsConnection() {
+    return environment -> {
+      var args = new GraphQLTypes.GraphQLQueryTypeAlertsConnectionArgs(environment.getArguments());
+      var request = AlertsConnectionFilterMapper.map(args.getGraphQLFilters());
+      var alerts = getTransitAlertService(environment).findAlerts(request);
+      return new SimpleCountedListConnection<>(AlertsConnectionOrdering.sort(alerts)).get(
+        environment
+      );
     };
   }
 
@@ -133,7 +143,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
       var args = new GraphQLTypes.GraphQLQueryTypeBikeParkArgs(environment.getArguments());
 
       VehicleParkingService vehicleParkingService = environment
-        .<GraphQLRequestContext>getContext()
+        .<GtfsGraphQLRequestContext>getContext()
         .vehicleParkingService();
 
       return vehicleParkingService
@@ -149,7 +159,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   public DataFetcher<Iterable<VehicleParking>> bikeParks() {
     return environment -> {
       VehicleParkingService vehicleParkingService = environment
-        .<GraphQLRequestContext>getContext()
+        .<GtfsGraphQLRequestContext>getContext()
         .vehicleParkingService();
 
       return vehicleParkingService.listBikeParks().stream().toList();
@@ -162,7 +172,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
       var args = new GraphQLTypes.GraphQLQueryTypeBikeRentalStationArgs(environment.getArguments());
 
       VehicleRentalService vehicleRentalStationService = environment
-        .<GraphQLRequestContext>getContext()
+        .<GtfsGraphQLRequestContext>getContext()
         .vehicleRentalService();
 
       return vehicleRentalStationService
@@ -180,7 +190,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   public DataFetcher<Iterable<VehicleRentalPlace>> bikeRentalStations() {
     return environment -> {
       VehicleRentalService vehicleRentalStationService = environment
-        .<GraphQLRequestContext>getContext()
+        .<GtfsGraphQLRequestContext>getContext()
         .vehicleRentalService();
 
       var args = new GraphQLTypes.GraphQLQueryTypeBikeRentalStationsArgs(
@@ -225,7 +235,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
       var args = new GraphQLTypes.GraphQLQueryTypeCarParkArgs(environment.getArguments());
 
       VehicleParkingService vehicleParkingService = environment
-        .<GraphQLRequestContext>getContext()
+        .<GtfsGraphQLRequestContext>getContext()
         .vehicleParkingService();
 
       return vehicleParkingService
@@ -241,7 +251,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   public DataFetcher<Iterable<VehicleParking>> carParks() {
     return environment -> {
       VehicleParkingService vehicleParkingService = environment
-        .<GraphQLRequestContext>getContext()
+        .<GtfsGraphQLRequestContext>getContext()
         .vehicleParkingService();
 
       var args = new GraphQLTypes.GraphQLQueryTypeCarParksArgs(environment.getArguments());
@@ -297,7 +307,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
       TransitService transitService = getTransitService(environment);
 
       return new GtfsRealtimeFuzzyTripMatcher(transitService).getTrip(
-        transitService.getRoute(FeedScopedId.parse(args.getGraphQLRoute())),
+        transitService.getRoute(FeedScopedId.parseStrict(args.getGraphQLRoute())),
         DIRECTION_MAPPER.map(args.getGraphQLDirection()),
         args.getGraphQLTime(),
         ServiceDateUtils.parseString(args.getGraphQLDate())
@@ -320,41 +330,46 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
       GraphQLTypes.GraphQLInputFiltersInput filterByIds = args.getGraphQLFilterByIds();
 
       if (filterByIds != null) {
-        filterByStops = filterByIds.getGraphQLStops() != null
-          ? filterByIds.getGraphQLStops().stream().map(FeedScopedId::parse).toList()
-          : null;
-        filterByStations = filterByIds.getGraphQLStations() != null
-          ? filterByIds.getGraphQLStations().stream().map(FeedScopedId::parse).toList()
-          : null;
-        filterByRoutes = filterByIds.getGraphQLRoutes() != null
-          ? filterByIds.getGraphQLRoutes().stream().map(FeedScopedId::parse).toList()
-          : null;
+        filterByStops =
+          filterByIds.getGraphQLStops() != null
+            ? FeedScopedId.parse(filterByIds.getGraphQLStops())
+            : null;
+        filterByStations =
+          filterByIds.getGraphQLStations() != null
+            ? FeedScopedId.parse(filterByIds.getGraphQLStations())
+            : null;
+        filterByRoutes =
+          filterByIds.getGraphQLRoutes() != null
+            ? FeedScopedId.parse(filterByIds.getGraphQLRoutes())
+            : null;
         filterByBikeRentalStations = filterByIds.getGraphQLBikeRentalStations();
       }
 
-      List<TransitMode> filterByModes = args.getGraphQLFilterByModes() != null
-        ? args
-            .getGraphQLFilterByModes()
-            .stream()
-            .map(mode -> {
-              try {
-                return TransitMode.valueOf(mode.name());
-              } catch (IllegalArgumentException ignored) {
-                return null;
-              }
-            })
-            .filter(Objects::nonNull)
-            .toList()
-        : null;
-      List<PlaceType> filterByPlaceTypes = args.getGraphQLFilterByPlaceTypes() != null
-        ? args.getGraphQLFilterByPlaceTypes().stream().map(GraphQLUtils::toModel).toList()
-        : DEFAULT_PLACE_TYPES;
+      List<TransitMode> filterByModes =
+        args.getGraphQLFilterByModes() != null
+          ? args
+              .getGraphQLFilterByModes()
+              .stream()
+              .map(mode -> {
+                try {
+                  return TransitMode.valueOf(mode.name());
+                } catch (IllegalArgumentException ignored) {
+                  return null;
+                }
+              })
+              .filter(Objects::nonNull)
+              .toList()
+          : null;
+      List<PlaceType> filterByPlaceTypes =
+        args.getGraphQLFilterByPlaceTypes() != null
+          ? args.getGraphQLFilterByPlaceTypes().stream().map(GraphQLUtils::toModel).toList()
+          : DEFAULT_PLACE_TYPES;
       List<String> filterByNetwork = args.getGraphQLFilterByNetwork();
 
       List<PlaceAtDistance> places;
       try {
         places = new ArrayList<>(
-          getGraphFinder(environment).findClosestPlaces(
+          getNearbyPlaceFinder(environment).findClosestPlaces(
             args.getGraphQLLat(),
             args.getGraphQLLon(),
             args.getGraphQLMaxDistance(),
@@ -387,7 +402,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
       if (ref == null) {
         return null;
       }
-      return ref.getLeg(transitService);
+      return ref.getLeg(transitService, getTransitAlertService(environment));
     };
   }
 
@@ -397,18 +412,18 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
       var args = new GraphQLTypes.GraphQLQueryTypeNodeArgs(environment.getArguments());
       String type = args.getGraphQLId().getType();
       String id = args.getGraphQLId().getId();
-      final GraphQLRequestContext context = environment.getContext();
+      final GtfsGraphQLRequestContext context = environment.getContext();
       TransitService transitService = context.transitService();
       VehicleParkingService vehicleParkingService = context.vehicleParkingService();
       VehicleRentalService vehicleRentalStationService = context.vehicleRentalService();
 
       switch (type) {
         case "Agency":
-          return transitService.getAgency(FeedScopedId.parse(id));
+          return transitService.getAgency(FeedScopedId.parseStrict(id));
         case "Alert":
-          return transitService.getTransitAlertService().getAlertById(FeedScopedId.parse(id));
+          return getTransitAlertService(environment).getAlertById(FeedScopedId.parseStrict(id));
         case "BikePark":
-          var bikeParkId = FeedScopedId.parse(id);
+          var bikeParkId = FeedScopedId.parseStrict(id);
           return vehicleParkingService == null
             ? null
             : vehicleParkingService
@@ -420,17 +435,17 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
         case "BikeRentalStation":
           return vehicleRentalStationService == null
             ? null
-            : vehicleRentalStationService.getVehicleRentalPlace(FeedScopedId.parse(id));
+            : vehicleRentalStationService.getVehicleRentalPlace(FeedScopedId.parseStrict(id));
         case "VehicleRentalStation":
           return vehicleRentalStationService == null
             ? null
-            : vehicleRentalStationService.getVehicleRentalStation(FeedScopedId.parse(id));
+            : vehicleRentalStationService.getVehicleRentalStation(FeedScopedId.parseStrict(id));
         case "RentalVehicle":
           return vehicleRentalStationService == null
             ? null
-            : vehicleRentalStationService.getVehicleRentalVehicle(FeedScopedId.parse(id));
+            : vehicleRentalStationService.getVehicleRentalVehicle(FeedScopedId.parseStrict(id));
         case "CarPark":
-          var carParkId = FeedScopedId.parse(id);
+          var carParkId = FeedScopedId.parseStrict(id);
           return vehicleParkingService == null
             ? null
             : vehicleParkingService
@@ -445,7 +460,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
         case "DepartureRow":
           return PatternAtStop.fromId(transitService, id);
         case "Pattern":
-          return transitService.getTripPattern(FeedScopedId.parse(id));
+          return transitService.getTripPattern(FeedScopedId.parseStrict(id));
         case "placeAtDistance": {
           String[] parts = id.split(";");
 
@@ -461,27 +476,27 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
           return new PlaceAtDistance(place, Double.parseDouble(parts[0]));
         }
         case "Route":
-          return transitService.getRoute(FeedScopedId.parse(id));
+          return transitService.getRoute(FeedScopedId.parseStrict(id));
         case "Stop":
-          return transitService.getRegularStop(FeedScopedId.parse(id));
+          return transitService.getRegularStop(FeedScopedId.parseStrict(id));
         case "Stoptime":
           // TODO
           return null;
         case "stopAtDistance": {
           String[] parts = id.split(";");
-          var stop = transitService.getRegularStop(FeedScopedId.parse(parts[1]));
+          var stopId = FeedScopedId.parseStrict(parts[1]);
 
           // TODO: Add geometry
-          return new NearbyStop(stop, Integer.parseInt(parts[0]), null, null);
+          return new NearbyStop(stopId, Integer.parseInt(parts[0]), null, null);
         }
         case "TicketType":
           // TODO
           return null;
         case "Trip":
-          var scopedId = FeedScopedId.parse(id);
+          var scopedId = FeedScopedId.parseStrict(id);
           return transitService.getTrip(scopedId);
         case "VehicleParking":
-          var vehicleParkingId = FeedScopedId.parse(id);
+          var vehicleParkingId = FeedScopedId.parseStrict(id);
           return vehicleParkingService == null
             ? null
             : vehicleParkingService
@@ -499,10 +514,9 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   @Override
   public DataFetcher<TripPattern> pattern() {
     return environment ->
-      getTransitService(environment).getTripPattern(
-        FeedScopedId.parse(
-          new GraphQLTypes.GraphQLQueryTypePatternArgs(environment.getArguments()).getGraphQLId()
-        )
+      mapFeedScopedIdOrNull(
+        new GraphQLTypes.GraphQLQueryTypePatternArgs(environment.getArguments()).getGraphQLId(),
+        id -> getTransitService(environment).getTripPattern(id)
       );
   }
 
@@ -512,9 +526,24 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   }
 
   @Override
+  public DataFetcher<Iterable<TripPattern>> patternsByIds() {
+    return environment -> {
+      var args = new GraphQLTypes.GraphQLQueryTypePatternsByIdsArgs(environment.getArguments());
+      TransitService transitService = getTransitService(environment);
+      return args
+        .getGraphQLIds()
+        .stream()
+        .map(FeedScopedId::parseStrict)
+        .map(transitService::getTripPattern)
+        .filter(Objects::nonNull)
+        .toList();
+    };
+  }
+
+  @Override
   public DataFetcher<DataFetcherResult<RoutingResponse>> plan() {
     return environment -> {
-      GraphQLRequestContext context = environment.getContext();
+      GtfsGraphQLRequestContext context = environment.<GtfsGraphQLRequestContext>getContext();
       RouteRequest request = LegacyRouteRequestMapper.toRouteRequest(environment, context);
       return getPlanResult(context, request);
     };
@@ -523,7 +552,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   @Override
   public DataFetcher<DataFetcherResult<RoutingResponse>> planConnection() {
     return environment -> {
-      GraphQLRequestContext context = environment.getContext();
+      GtfsGraphQLRequestContext context = environment.<GtfsGraphQLRequestContext>getContext();
       RouteRequest request = RouteRequestMapper.toRouteRequest(environment, context);
       return getPlanResult(context, request);
     };
@@ -568,7 +597,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
       var args = new GraphQLTypes.GraphQLQueryTypeRentalVehicleArgs(environment.getArguments());
 
       VehicleRentalService vehicleRentalStationService = environment
-        .<GraphQLRequestContext>getContext()
+        .<GtfsGraphQLRequestContext>getContext()
         .vehicleRentalService();
 
       return vehicleRentalStationService
@@ -586,7 +615,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   public DataFetcher<Iterable<VehicleRentalVehicle>> rentalVehicles() {
     return environment -> {
       VehicleRentalService vehicleRentalStationService = environment
-        .<GraphQLRequestContext>getContext()
+        .<GtfsGraphQLRequestContext>getContext()
         .vehicleRentalService();
 
       var args = new GraphQLTypes.GraphQLQueryTypeRentalVehiclesArgs(environment.getArguments());
@@ -629,10 +658,9 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   @Override
   public DataFetcher<Route> route() {
     return environment ->
-      getTransitService(environment).getRoute(
-        FeedScopedId.parse(
-          new GraphQLTypes.GraphQLQueryTypeRouteArgs(environment.getArguments()).getGraphQLId()
-        )
+      mapFeedScopedIdOrNull(
+        new GraphQLTypes.GraphQLQueryTypeRouteArgs(environment.getArguments()).getGraphQLId(),
+        id -> getTransitService(environment).getRoute(id)
       );
   }
 
@@ -644,9 +672,10 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
         args.getGraphQLLat(),
         args.getGraphQLLon()
       );
-      Comparator<RouteRegion> order = location == null
-        ? Comparator.comparing(RouteRegion::name)
-        : RouteRegion.closestFirst(location);
+      Comparator<RouteRegion> order =
+        location == null
+          ? Comparator.comparing(RouteRegion::name)
+          : RouteRegion.closestFirst(location);
       return getTransitService(environment).listRouteRegions().stream().sorted(order).toList();
     };
   }
@@ -662,7 +691,8 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
         return args
           .getGraphQLIds()
           .stream()
-          .map(FeedScopedId::parse)
+          .filter(Objects::nonNull)
+          .flatMap(id -> FeedScopedId.parseOptional(id).stream())
           .map(transitService::getRoute)
           .toList();
       }
@@ -712,7 +742,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   public DataFetcher<Iterable<SearchResultModel>> search() {
     return environment -> {
       var args = new GraphQLTypes.GraphQLQueryTypeSearchArgs(environment.getArguments());
-      var context = environment.<GraphQLRequestContext>getContext();
+      var context = environment.<GtfsGraphQLRequestContext>getContext();
       var luceneIndex = context.luceneIndex();
 
       if (luceneIndex == null) {
@@ -784,10 +814,9 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   @Override
   public DataFetcher<Object> station() {
     return environment ->
-      getTransitService(environment).getStation(
-        FeedScopedId.parse(
-          new GraphQLTypes.GraphQLQueryTypeStationArgs(environment.getArguments()).getGraphQLId()
-        )
+      mapFeedScopedIdOrNull(
+        new GraphQLTypes.GraphQLQueryTypeStationArgs(environment.getArguments()).getGraphQLId(),
+        id -> getTransitService(environment).getStation(id)
       );
   }
 
@@ -802,7 +831,8 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
         return args
           .getGraphQLIds()
           .stream()
-          .map(FeedScopedId::parse)
+          .filter(Objects::nonNull)
+          .flatMap(id -> FeedScopedId.parseOptional(id).stream())
           .map(transitService::getStation)
           .collect(Collectors.toList());
       }
@@ -823,10 +853,9 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   @Override
   public DataFetcher<Object> stop() {
     return environment ->
-      getTransitService(environment).getRegularStop(
-        FeedScopedId.parse(
-          new GraphQLTypes.GraphQLQueryTypeStopArgs(environment.getArguments()).getGraphQLId()
-        )
+      mapFeedScopedIdOrNull(
+        new GraphQLTypes.GraphQLQueryTypeStopArgs(environment.getArguments()).getGraphQLId(),
+        id -> getTransitService(environment).getRegularStop(id)
       );
   }
 
@@ -841,7 +870,8 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
         return args
           .getGraphQLIds()
           .stream()
-          .map(FeedScopedId::parse)
+          .filter(Objects::nonNull)
+          .flatMap(id -> FeedScopedId.parseOptional(id).stream())
           .map(transitService::getRegularStop)
           .collect(Collectors.toList());
       }
@@ -895,7 +925,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
 
       List<NearbyStop> stops;
       try {
-        stops = getGraphFinder(environment).findClosestStops(
+        stops = getNearbyStopFinder(environment).findNearbyStops(
           new Coordinate(args.getGraphQLLon(), args.getGraphQLLat()),
           args.getGraphQLRadius()
         );
@@ -911,9 +941,10 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   public DataFetcher<Iterable<FareRuleSet>> ticketTypes() {
     return environment -> {
       var fareService = getFareService(environment);
-      Map<FareType, Collection<FareRuleSet>> fareRules = fareService instanceof GtfsFaresService
-        ? ((GtfsFaresService) fareService).faresV1().getFareRulesPerType()
-        : ((DefaultFareService) fareService).getFareRulesPerType();
+      Map<FareType, Collection<FareRuleSet>> fareRules =
+        fareService instanceof GtfsFaresService
+          ? ((GtfsFaresService) fareService).faresV1().getFareRulesPerType()
+          : ((DefaultFareService) fareService).getFareRulesPerType();
 
       return fareRules
         .entrySet()
@@ -928,10 +959,9 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   @Override
   public DataFetcher<Trip> trip() {
     return environment ->
-      getTransitService(environment).getTrip(
-        FeedScopedId.parse(
-          new GraphQLTypes.GraphQLQueryTypeTripArgs(environment.getArguments()).getGraphQLId()
-        )
+      mapFeedScopedIdOrNull(
+        new GraphQLTypes.GraphQLQueryTypeTripArgs(environment.getArguments()).getGraphQLId(),
+        id -> getTransitService(environment).getTrip(id)
       );
   }
 
@@ -961,15 +991,36 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   }
 
   @Override
+  public DataFetcher<CanceledTripsSummary> canceledTripsSummary() {
+    return environment -> {
+      var request = CanceledTripsFilterMapper.mapToTripOnServiceDateRequest(environment);
+      var transitService = getTransitService(environment);
+      var trips = transitService.findCanceledTrips(request);
+      var patternTripCounts = trips
+        .stream()
+        .collect(
+          Collectors.groupingBy(
+            t -> t.getTrip().getRoute(),
+            Collectors.groupingBy(
+              t -> transitService.findPattern(t.getTrip(), t.getServiceDate()),
+              Collectors.counting()
+            )
+          )
+        );
+      return new CanceledTripsSummary(patternTripCounts);
+    };
+  }
+
+  @Override
   public DataFetcher<VehicleParking> vehicleParking() {
     return environment -> {
       var args = new GraphQLTypes.GraphQLQueryTypeVehicleParkingArgs(environment.getArguments());
 
       VehicleParkingService vehicleParkingService = environment
-        .<GraphQLRequestContext>getContext()
+        .<GtfsGraphQLRequestContext>getContext()
         .vehicleParkingService();
 
-      var vehicleParkingId = FeedScopedId.parse(args.getGraphQLId());
+      var vehicleParkingId = FeedScopedId.parseStrict(args.getGraphQLId());
       return vehicleParkingService
         .listVehicleParkings()
         .stream()
@@ -983,7 +1034,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   public DataFetcher<Iterable<VehicleParking>> vehicleParkings() {
     return environment -> {
       VehicleParkingService vehicleParkingService = environment
-        .<GraphQLRequestContext>getContext()
+        .<GtfsGraphQLRequestContext>getContext()
         .vehicleParkingService();
 
       var args = new GraphQLTypes.GraphQLQueryTypeVehicleParkingsArgs(environment.getArguments());
@@ -1013,7 +1064,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
       );
 
       VehicleRentalService vehicleRentalStationService = environment
-        .<GraphQLRequestContext>getContext()
+        .<GtfsGraphQLRequestContext>getContext()
         .vehicleRentalService();
 
       var id = args.getGraphQLId();
@@ -1032,7 +1083,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   public DataFetcher<Iterable<VehicleRentalStation>> vehicleRentalStations() {
     return environment -> {
       VehicleRentalService vehicleRentalStationService = environment
-        .<GraphQLRequestContext>getContext()
+        .<GtfsGraphQLRequestContext>getContext()
         .vehicleRentalService();
 
       var args = new GraphQLTypes.GraphQLQueryTypeVehicleRentalStationsArgs(
@@ -1066,7 +1117,7 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   public DataFetcher<Iterable<VehicleRentalPlace>> vehicleRentalsByBbox() {
     return environment -> {
       VehicleRentalService vehicleRentalService = environment
-        .<GraphQLRequestContext>getContext()
+        .<GtfsGraphQLRequestContext>getContext()
         .vehicleRentalService();
 
       var args = new GraphQLTypes.GraphQLQueryTypeVehicleRentalsByBboxArgs(
@@ -1094,18 +1145,26 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
   }
 
   private TransitService getTransitService(DataFetchingEnvironment environment) {
-    return environment.<GraphQLRequestContext>getContext().transitService();
+    return environment.<GtfsGraphQLRequestContext>getContext().transitService();
+  }
+
+  private TransitAlertService getTransitAlertService(DataFetchingEnvironment environment) {
+    return environment.<GtfsGraphQLRequestContext>getContext().transitAlertService();
   }
 
   private FareService getFareService(DataFetchingEnvironment environment) {
-    return environment.<GraphQLRequestContext>getContext().fareService();
+    return environment.<GtfsGraphQLRequestContext>getContext().fareService();
   }
 
-  private GraphFinder getGraphFinder(DataFetchingEnvironment environment) {
-    return environment.<GraphQLRequestContext>getContext().graphFinder();
+  private NearbyPlaceFinder getNearbyPlaceFinder(DataFetchingEnvironment environment) {
+    return environment.<GtfsGraphQLRequestContext>getContext().nearbyPlaceFinder();
   }
 
-  private DataFetcherResult getPlanResult(GraphQLRequestContext context, RouteRequest request) {
+  private NearbyStopFinder getNearbyStopFinder(DataFetchingEnvironment environment) {
+    return environment.<GtfsGraphQLRequestContext>getContext().nearbyStopFinder();
+  }
+
+  private DataFetcherResult getPlanResult(GtfsGraphQLRequestContext context, RouteRequest request) {
     RoutingResponse res = context.routingService().route(request);
     res.getDebugTimingAggregator().finishedRendering();
     return DataFetcherResult.<RoutingResponse>newResult()
@@ -1114,45 +1173,14 @@ public class QueryTypeImpl implements GraphQLDataFetchers.GraphQLQueryType {
       .build();
   }
 
-  protected static List<TransitAlert> filterAlerts(
-    Collection<TransitAlert> alerts,
-    GraphQLTypes.GraphQLQueryTypeAlertsArgs args
-  ) {
-    var severities = args.getGraphQLSeverityLevel();
-    var effects = args.getGraphQLEffect();
-    var causes = args.getGraphQLCause();
-    return alerts
-      .stream()
-      .filter(
-        alert ->
-          args.getGraphQLFeeds() == null ||
-          args.getGraphQLFeeds().contains(alert.getId().getFeedId())
-      )
-      .filter(
-        alert -> severities == null || severities.contains(getGraphQLSeverity(alert.severity()))
-      )
-      .filter(alert -> effects == null || effects.contains(getGraphQLEffect(alert.effect())))
-      .filter(alert -> causes == null || causes.contains(getGraphQLCause(alert.cause())))
-      .filter(
-        alert ->
-          args.getGraphQLRoute() == null ||
-          alert
-            .entities()
-            .stream()
-            .filter(entitySelector -> entitySelector instanceof EntitySelector.Route)
-            .map(EntitySelector.Route.class::cast)
-            .anyMatch(route -> args.getGraphQLRoute().contains(route.routeId().toString()))
-      )
-      .filter(
-        alert ->
-          args.getGraphQLStop() == null ||
-          alert
-            .entities()
-            .stream()
-            .filter(entitySelector -> entitySelector instanceof EntitySelector.Stop)
-            .map(EntitySelector.Stop.class::cast)
-            .anyMatch(stop -> args.getGraphQLStop().contains(stop.stopId().toString()))
-      )
-      .toList();
+  /// Parse a string as a feed scoped id and apply a mapping function to the id.
+  ///
+  /// Returns null if the input is null or an invalid feed scoped id
+  @Nullable
+  private <T> T mapFeedScopedIdOrNull(@Nullable String id, Function<FeedScopedId, T> mapping) {
+    if (id == null) {
+      return null;
+    }
+    return FeedScopedId.parseOptional(id).map(mapping).orElse(null);
   }
 }

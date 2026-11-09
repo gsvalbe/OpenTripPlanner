@@ -5,7 +5,7 @@ import static org.opentripplanner.transfer.constrained.model.TransferPriority.RE
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.opentripplanner.apis.gtfs.GraphQLRequestContext;
+import org.opentripplanner.apis.gtfs.GtfsGraphQLRequestContext;
 import org.opentripplanner.apis.gtfs.generated.GraphQLDataFetchers;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes;
 import org.opentripplanner.apis.gtfs.model.TransferEndpoint;
@@ -75,7 +75,7 @@ public class TripTransferImpl implements GraphQLDataFetchers.GraphQLTripTransfer
   }
 
   private TransitService getTransitService(DataFetchingEnvironment environment) {
-    return environment.<GraphQLRequestContext>getContext().transitService();
+    return environment.<GtfsGraphQLRequestContext>getContext().transitService();
   }
 
   private ConstrainedTransfer getSource(DataFetchingEnvironment environment) {

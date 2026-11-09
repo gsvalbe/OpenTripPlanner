@@ -2,9 +2,9 @@ package org.opentripplanner.apis.gtfs.datafetchers;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.opentripplanner.apis.support.graphql.DataFetchingSupport.dataFetchingEnvironment;
+import static org.opentripplanner.core.model.id.FeedScopedIdForTestFactory.id;
 import static org.opentripplanner.ext.fares.model.FareModelForTest.AIRPORT_TO_CITY_CENTER_SET;
 import static org.opentripplanner.ext.fares.model.FareModelForTest.INSIDE_CITY_CENTER_SET;
-import static org.opentripplanner.transit.model._data.TimetableRepositoryForTest.id;
 
 import java.time.Duration;
 import java.util.List;
@@ -26,7 +26,7 @@ import org.opentripplanner.routing.core.FareType;
 import org.opentripplanner.routing.fares.FareService;
 import org.opentripplanner.routing.fares.StopFareIdentity;
 import org.opentripplanner.street.geometry.WgsCoordinate;
-import org.opentripplanner.transit.model._data.TimetableRepositoryForTest;
+import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.basic.Money;
 import org.opentripplanner.transit.model.framework.Deduplicator;
 import org.opentripplanner.transit.model.network.Route;
@@ -39,7 +39,7 @@ import org.opentripplanner.transit.model.timetable.TripTimesFactory;
 import org.opentripplanner.transit.service.DefaultTransitService;
 import org.opentripplanner.transit.service.SiteRepository;
 import org.opentripplanner.transit.service.SiteRepositoryBuilder;
-import org.opentripplanner.transit.service.TimetableRepository;
+import org.opentripplanner.transit.service.TransitRepository;
 import org.opentripplanner.transit.service.TransitService;
 import org.opentripplanner.utils.time.TimeUtils;
 
@@ -49,7 +49,7 @@ import org.opentripplanner.utils.time.TimeUtils;
  */
 class TripImplFareTest {
 
-  private static final TimetableRepositoryForTest MODEL = TimetableRepositoryForTest.of();
+  private static final TransitRepositoryForTest MODEL = TransitRepositoryForTest.of();
   private static final Money TEN_DOLLARS = Money.usDollars(10);
 
   // Zone ids match those referenced by the fare rule sets in FareModelForTest.
@@ -59,27 +59,25 @@ class TripImplFareTest {
 
   private static final RegularStop AIRPORT = SITE_BUILDER.regularStop(id("airport"))
     .withCoordinate(new WgsCoordinate(1, 1))
-    .addFareZones(AIRPORT_ZONE)
+    .addFareZone(AIRPORT_ZONE)
     .withName(I18NString.of("Airport"))
     .build();
   private static final RegularStop CITY_CENTER_A = SITE_BUILDER.regularStop(id("city-center-a"))
     .withCoordinate(new WgsCoordinate(1, 2))
-    .addFareZones(CITY_CENTER_ZONE)
+    .addFareZone(CITY_CENTER_ZONE)
     .withName(I18NString.of("City center: stop A"))
     .build();
   private static final RegularStop CITY_CENTER_B = SITE_BUILDER.regularStop(id("city-center-b"))
     .withCoordinate(new WgsCoordinate(1, 3))
-    .addFareZones(CITY_CENTER_ZONE)
+    .addFareZone(CITY_CENTER_ZONE)
     .withName(I18NString.of("City center: stop B"))
     .build();
 
   // The trip runs airport -> city center A -> city center B.
   private static final List<RegularStop> STOPS = List.of(AIRPORT, CITY_CENTER_A, CITY_CENTER_B);
 
-  private static final Route ROUTE = TimetableRepositoryForTest.route("route-1").build();
-  private static final Trip TRIP = TimetableRepositoryForTest.trip("trip-1")
-    .withRoute(ROUTE)
-    .build();
+  private static final Route ROUTE = TransitRepositoryForTest.route("route-1").build();
+  private static final Trip TRIP = TransitRepositoryForTest.trip("trip-1").withRoute(ROUTE).build();
 
   private static final TransitService TRANSIT_SERVICE = buildTransitService();
   private static final FareService FARE_SERVICE = buildFareService();
@@ -188,17 +186,17 @@ class TripImplFareTest {
       stopTime(30, CITY_CENTER_B, "11:10")
     );
     var tripTimes = TripTimesFactory.tripTimes(TRIP, stopTimes, new Deduplicator());
-    TripPattern pattern = TimetableRepositoryForTest.tripPattern("pattern-1", ROUTE)
-      .withStopPattern(TimetableRepositoryForTest.stopPattern(STOPS.toArray(StopLocation[]::new)))
+    TripPattern pattern = TransitRepositoryForTest.tripPattern("pattern-1", ROUTE)
+      .withStopPattern(TransitRepositoryForTest.stopPattern(STOPS.toArray(StopLocation[]::new)))
       .withScheduledTimeTableBuilder(builder -> builder.addTripTimes(tripTimes))
       .build();
 
     STOPS.forEach(SITE_BUILDER::withRegularStop);
-    var timetableRepository = new TimetableRepository(SITE_BUILDER.build());
-    timetableRepository.addTripPattern(id("pattern-1"), pattern);
-    timetableRepository.addAgency(ROUTE.getAgency());
-    timetableRepository.index();
-    return new DefaultTransitService(timetableRepository);
+    var transitRepository = new TransitRepository(SITE_BUILDER.build());
+    transitRepository.addTripPattern(id("pattern-1"), pattern);
+    transitRepository.addAgency(ROUTE.getAgency());
+    transitRepository.index();
+    return new DefaultTransitService(transitRepository);
   }
 
   private static FareService buildFareService() {

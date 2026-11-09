@@ -1,14 +1,15 @@
 package org.opentripplanner.raptor._data.stoparrival;
 
-import static org.opentripplanner.raptor.api.model.PathLegType.TRANSIT;
+import static org.opentripplanner.raptor.api.view.PathLegType.TRANSIT;
 
 import org.opentripplanner.raptor._data.transit.TestTripSchedule;
-import org.opentripplanner.raptor.api.model.PathLegType;
 import org.opentripplanner.raptor.api.view.ArrivalView;
+import org.opentripplanner.raptor.api.view.PathLegType;
 import org.opentripplanner.raptor.api.view.TransitPathView;
 
 class Transit extends AbstractStopArrival implements TransitPathView<TestTripSchedule> {
 
+  private final int boardStopPosition;
   private final TestTripSchedule trip;
 
   Transit(
@@ -17,10 +18,12 @@ class Transit extends AbstractStopArrival implements TransitPathView<TestTripSch
     int arrivalTime,
     int c1,
     int c2,
+    int boardStopPosition,
     TestTripSchedule trip,
     ArrivalView<TestTripSchedule> previous
   ) {
     super(round, stop, arrivalTime, c1, c2, previous);
+    this.boardStopPosition = boardStopPosition;
     this.trip = trip;
   }
 
@@ -35,8 +38,8 @@ class Transit extends AbstractStopArrival implements TransitPathView<TestTripSch
   }
 
   @Override
-  public int boardStop() {
-    return previous().stop();
+  public int boardStopPosition() {
+    return boardStopPosition;
   }
 
   @Override

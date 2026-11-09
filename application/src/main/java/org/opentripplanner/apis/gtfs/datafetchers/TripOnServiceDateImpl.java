@@ -6,8 +6,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import javax.annotation.Nullable;
-import org.opentripplanner.apis.gtfs.GraphQLRequestContext;
+import org.opentripplanner.apis.gtfs.GtfsGraphQLRequestContext;
 import org.opentripplanner.apis.gtfs.generated.GraphQLDataFetchers;
+import org.opentripplanner.apis.gtfs.model.RealTimeTripStateModel;
 import org.opentripplanner.model.TripTimeOnDate;
 import org.opentripplanner.transit.model.network.ReplacedByRelation;
 import org.opentripplanner.transit.model.network.ReplacementForRelation;
@@ -47,6 +48,31 @@ public class TripOnServiceDateImpl implements GraphQLDataFetchers.GraphQLTripOnS
       getTransitService(environment)
         .getReplacementHelper()
         .isReplacementTripOnServiceDate(getSource(environment));
+  }
+
+  @Override
+  public DataFetcher<RealTimeTripStateModel> realTimeTripState() {
+    return environment -> {
+      var transitService = getTransitService(environment);
+      var tripOnServiceDate = getSource(environment);
+      return transitService
+        .findTripTimes(tripOnServiceDate.getTrip(), tripOnServiceDate.getServiceDate())
+        .map(tripTimes -> {
+          if (tripTimes.isDeleted()) {
+            throw new RuntimeException(
+              "Trip has been deleted. this should not be exposed to the API and is probably a bug"
+            );
+          }
+          return new RealTimeTripStateModel(
+            tripTimes.isAdded(),
+            tripTimes.isCanceled(),
+            tripTimes.isTimesModified(),
+            tripTimes.isTripPatternModified(),
+            tripTimes.hasAnyUpdates()
+          );
+        })
+        .orElse(null);
+    };
   }
 
   @Override
@@ -117,7 +143,7 @@ public class TripOnServiceDateImpl implements GraphQLDataFetchers.GraphQLTripOnS
   }
 
   private TransitService getTransitService(DataFetchingEnvironment environment) {
-    return environment.<GraphQLRequestContext>getContext().transitService();
+    return environment.<GtfsGraphQLRequestContext>getContext().transitService();
   }
 
   private Trip getTrip(DataFetchingEnvironment environment) {

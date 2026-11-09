@@ -1,6 +1,6 @@
 package org.opentripplanner.raptor.rangeraptor.internalapi;
 
-import org.opentripplanner.raptor.api.model.RaptorConstants;
+import org.opentripplanner.raptor.spi.RaptorConstants;
 import org.opentripplanner.utils.lang.OtpNumberFormat;
 import org.opentripplanner.utils.time.DurationUtils;
 
@@ -21,10 +21,10 @@ public record HeuristicAtStop(int minTravelDuration, int minNumTransfers, int mi
   public String toString() {
     return this == UNREACHED
       ? "[]"
-      : ("[" +
+      : "[" +
           (DurationUtils.durationToStr(minTravelDuration) + " ") +
           (minNumTransfers + "tx ") +
           OtpNumberFormat.formatCostCenti(minCost) +
-          "]");
+          "]";
   }
 }

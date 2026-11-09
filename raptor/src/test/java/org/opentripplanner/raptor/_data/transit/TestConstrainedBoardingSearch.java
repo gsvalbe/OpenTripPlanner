@@ -15,7 +15,8 @@ import org.opentripplanner.raptor.spi.RaptorTimeTable;
 import org.opentripplanner.utils.tostring.ToStringBuilder;
 
 public class TestConstrainedBoardingSearch
-  implements RaptorConstrainedBoardingSearch<TestTripSchedule> {
+  implements RaptorConstrainedBoardingSearch<TestTripSchedule>
+{
 
   /** Index of guaranteed transfers by fromStopPos */
   private final TIntObjectMap<List<TestConstrainedTransfer>> transfersByFromStopPos =
@@ -54,9 +55,8 @@ public class TestConstrainedBoardingSearch
     for (TestConstrainedTransfer tx : list) {
       var trip = tx.getSourceTrip();
       if (trip == sourceTrip) {
-        int stopPos = trip.findDepartureStopPosition(prevTransitArrivalTime, sourceStopIndex);
         boolean boardAlightPossible = timeAfterOrEqual.test(tx.time(), prevTransitArrivalTime);
-        if (tx.getSourceStopPos() == stopPos && boardAlightPossible) {
+        if (boardAlightPossible) {
           return tx.boardingEvent(tx.isFacilitated() ? prevTransitArrivalTime : earliestBoardTime);
         }
       }
@@ -107,16 +107,11 @@ public class TestConstrainedBoardingSearch
         sourceTrip,
         sourceStopPos,
         targetTrip,
-        targetTripIndex,
         targetStopPos,
+        targetTripIndex,
         targetTime
       )
     );
     transfersByToStopPosExist.set(sourceStopPos);
-  }
-
-  void clear() {
-    transfersByFromStopPos.clear();
-    transfersByToStopPosExist.clear();
   }
 }

@@ -4,10 +4,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
 import org.opentripplanner.raptor.api.debug.DebugEvent;
-import org.opentripplanner.raptor.api.model.RaptorConstants;
 import org.opentripplanner.raptor.api.request.DebugRequest;
 import org.opentripplanner.raptor.rangeraptor.internalapi.DebugHandler;
 import org.opentripplanner.raptor.rangeraptor.internalapi.WorkerLifeCycle;
+import org.opentripplanner.raptor.spi.RaptorConstants;
 
 /**
  * Generic abstract implementation of the {@link DebugHandler} interface. The main purpose is to
@@ -74,7 +74,7 @@ abstract class AbstractDebugHandlerAdapter<T> implements DebugHandler<T> {
   /**
    * Returns {@link RaptorConstants#NOT_FOUND} not supported.
    */
-  protected abstract int stop(T arrival);
+  protected abstract int stopIndex(T arrival);
 
   protected abstract Iterable<Integer> stopsVisited(T arrival);
 
@@ -92,11 +92,11 @@ abstract class AbstractDebugHandlerAdapter<T> implements DebugHandler<T> {
   }
 
   private boolean isDebugStopOrTripPath(T arrival) {
-    return stops.contains(stop(arrival)) || isDebugTripPath(arrival);
+    return stops.contains(stopIndex(arrival)) || isDebugTripPath(arrival);
   }
 
   private boolean isDebugTripPath(T arrival) {
-    if (!isDebugTrip(stop(arrival))) {
+    if (!isDebugTrip(stopIndex(arrival))) {
       return false;
     }
 

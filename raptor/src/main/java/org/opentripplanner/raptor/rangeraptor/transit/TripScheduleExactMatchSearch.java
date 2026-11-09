@@ -1,7 +1,7 @@
 package org.opentripplanner.raptor.rangeraptor.transit;
 
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
 import org.opentripplanner.raptor.spi.RaptorBoardOrAlightEvent;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 import org.opentripplanner.raptor.spi.RaptorTripScheduleSearch;
 import org.opentripplanner.utils.tostring.ToStringBuilder;
 
@@ -18,8 +18,8 @@ import org.opentripplanner.utils.tostring.ToStringBuilder;
  *
  * @param <T> The TripSchedule type defined by the user of the raptor API.
  */
-public final class TripScheduleExactMatchSearch<T extends RaptorTripSchedule>
-  implements RaptorTripScheduleSearch<T> {
+public final class TripScheduleExactMatchSearch<T extends RaptorTripSchedule> implements
+  RaptorTripScheduleSearch<T> {
 
   private final int slack;
   private final RaptorTripScheduleSearch<T> delegate;

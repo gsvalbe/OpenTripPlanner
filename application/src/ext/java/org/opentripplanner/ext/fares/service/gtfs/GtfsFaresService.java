@@ -30,10 +30,7 @@ public final class GtfsFaresService implements FareService {
       fare = Objects.requireNonNullElse(faresV1.calculateFares(itinerary), ItineraryFare.empty());
     } else {
       var products = faresV2.calculateFares(itinerary);
-      fare.addItineraryProducts(products.itineraryProducts());
-      if (products.itineraryProducts().isEmpty()) {
-        addLegProducts(products.legProducts(), fare);
-      }
+      addLegProducts(products.legProducts(), fare);
     }
     return fare;
   }
@@ -48,11 +45,9 @@ public final class GtfsFaresService implements FareService {
    * Add a complex set of fare products for a specific leg;
    */
   private static void addLegProducts(Multimap<Leg, FareOffer> legProducts, ItineraryFare fares) {
-    legProducts
-      .entries()
-      .forEach(e -> {
-        fares.addFareProduct(e.getKey(), e.getValue());
-      });
+    legProducts.entries().forEach(e -> {
+      fares.addFareProduct(e.getKey(), e.getValue());
+    });
   }
 
   public DefaultFareService faresV1() {

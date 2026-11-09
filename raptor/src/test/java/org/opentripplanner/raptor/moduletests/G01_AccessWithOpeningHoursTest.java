@@ -24,7 +24,6 @@ import org.opentripplanner.raptor._data.transit.TestTripSchedule;
 import org.opentripplanner.raptor.api.request.RaptorRequestBuilder;
 import org.opentripplanner.raptor.configure.RaptorTestFactory;
 import org.opentripplanner.raptor.moduletests.support.ExpectedList;
-import org.opentripplanner.raptor.moduletests.support.ModuleTestDebugLogging;
 import org.opentripplanner.raptor.moduletests.support.RaptorModuleTestCase;
 import org.opentripplanner.raptor.moduletests.support.RaptorModuleTestCaseFactory;
 import org.opentripplanner.utils.time.TimeUtils;
@@ -63,14 +62,14 @@ public class G01_AccessWithOpeningHoursTest implements RaptorTestConstants {
     data
       .withTimetables(
         """
-          B      E
-          00:15  00:30
-          00:20  00:35
-          00:25  00:40
-          00:30  00:45
-          24:15  24:30
-          24:20  24:35
-          """ +
+        B      E
+        00:15  00:30
+        00:20  00:35
+        00:25  00:40
+        00:30  00:45
+        24:15  24:30
+        24:20  24:35
+        """ +
           // Not within time-limit 24:42 (need 2 min for egress)
           "24:25  24:40"
       )
@@ -82,8 +81,6 @@ public class G01_AccessWithOpeningHoursTest implements RaptorTestConstants {
       .latestArrivalTime(T24_40)
       .searchWindow(Duration.ofMinutes(30))
       .timetable(true);
-
-    ModuleTestDebugLogging.setupDebugLogging(data);
   }
 
   private static List<RaptorModuleTestCase> openInSearchIntervalCases(String access) {

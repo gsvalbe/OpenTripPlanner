@@ -28,11 +28,59 @@ public class ListUtils {
   }
 
   /**
+   * Put all elements in the iterable into a list.
+   * <p>
+   * Note: This is inefficient - do not use it in hot code paths and try to iterate instead.
+   */
+  public static <T> List<T> ofIterable(Iterable<T> iterable) {
+    var ret = new ArrayList<T>();
+    iterable.forEach(ret::add);
+    return ret;
+  }
+
+  /**
+   * Count the number of elements in the iterable.
+   */
+  public static int countIterable(Iterable<?> iterable) {
+    int count = 0;
+    for (var _ : iterable) {
+      count++;
+    }
+    return count;
+  }
+
+  /**
    * Combine a number of collections into a single list.
    */
   @SafeVarargs
   public static <T> List<T> combine(Collection<T>... lists) {
     return Arrays.stream(lists).flatMap(Collection::stream).toList();
+  }
+
+  /**
+   * Partition the list into consecutive sublists with the given {@code maxSize}. Each sublist has
+   * {@code maxSize} elements, except the last one, which may have fewer. For example,
+   * {@code partition([A,B,C,D,E], 2)} yields {@code [[A,B],[C,D],[E]]}.
+   * <p>
+   * The partitioning is computed eagerly - the number of sublists is fixed when this method
+   * returns. The sublists themselves are {@link List#subList(int, int) views} of the original
+   * list, so they must be consumed before the original list is structurally modified (elements
+   * added or removed). Unlike the Guava equivalent, the returned outer list does not reflect
+   * later changes to the input list.
+   *
+   * @param maxSize the maximum number of elements in each sublist, must be at least 1
+   * @throws IllegalArgumentException if {@code maxSize} is less than 1
+   * @throws NullPointerException if {@code list} is {@code null}
+   */
+  public static <T> List<List<T>> partition(List<T> list, int maxSize) {
+    if (maxSize < 1) {
+      throw new IllegalArgumentException("maxSize must be at least 1, but was: " + maxSize);
+    }
+    List<List<T>> partitions = new ArrayList<>();
+    for (int i = 0; i < list.size(); i += maxSize) {
+      partitions.add(list.subList(i, Math.min(i + maxSize, list.size())));
+    }
+    return partitions;
   }
 
   /**
@@ -77,7 +125,7 @@ public class ListUtils {
    * called.
    */
   public static <T> List<T> nullSafeImmutableList(@Nullable Collection<T> c) {
-    return (c == null) ? List.of() : List.copyOf(c);
+    return c == null ? List.of() : List.copyOf(c);
   }
 
   /**

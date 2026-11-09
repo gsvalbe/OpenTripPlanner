@@ -12,13 +12,13 @@ import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.ext.stopconsolidation.internal.DefaultStopConsolidationRepository;
 import org.opentripplanner.ext.stopconsolidation.internal.DefaultStopConsolidationService;
 import org.opentripplanner.street.geometry.WgsCoordinate;
-import org.opentripplanner.transit.model._data.TimetableRepositoryForTest;
+import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.service.DefaultTransitService;
-import org.opentripplanner.transit.service.TimetableRepository;
+import org.opentripplanner.transit.service.TransitRepository;
 
 /**
  * Tests the unified search over stops, routes and patterns. The model is deliberately Riga-shaped:
@@ -27,7 +27,7 @@ import org.opentripplanner.transit.service.TimetableRepository;
  */
 class LuceneIndexSearchTest {
 
-  private static final TimetableRepositoryForTest TEST_MODEL = TimetableRepositoryForTest.of();
+  private static final TransitRepositoryForTest TEST_MODEL = TransitRepositoryForTest.of();
 
   private static final WgsCoordinate RIGA = new WgsCoordinate(56.95, 24.1);
   private static final WgsCoordinate LIEPAJA = new WgsCoordinate(56.505, 21.01);
@@ -65,70 +65,70 @@ class LuceneIndexSearchTest {
     .withCoordinate(56.955, 24.105)
     .build();
 
-  private static final Route TRAM_5 = TimetableRepositoryForTest.route("tram-5")
+  private static final Route TRAM_5 = TransitRepositoryForTest.route("tram-5")
     .withShortName("5")
     .withLongName(I18NString.of("Mīlgrāvis - Ķengarags"))
     .withMode(TransitMode.TRAM)
     .build();
-  private static final Route TRAM_11 = TimetableRepositoryForTest.route("tram-11")
+  private static final Route TRAM_11 = TransitRepositoryForTest.route("tram-11")
     .withShortName("11")
     .withLongName(I18NString.of("Mežaparks - Ausekļa iela"))
     .withMode(TransitMode.TRAM)
     .build();
-  private static final Route BUS_5 = TimetableRepositoryForTest.route("bus-5")
+  private static final Route BUS_5 = TransitRepositoryForTest.route("bus-5")
     .withShortName("5")
     .withLongName(I18NString.of("Liepājas osta - Karosta"))
     .withMode(TransitMode.BUS)
     .build();
 
   // two routes with the same number in different regions: only the region name tells them apart
-  private static final Route BUS_31_RIGA = TimetableRepositoryForTest.route("bus-31-riga")
+  private static final Route BUS_31_RIGA = TransitRepositoryForTest.route("bus-31-riga")
     .withShortName("31")
     .withLongName(I18NString.of("Abrenes iela - Ulbroka"))
     .withRegionName("Rīga")
     .withMode(TransitMode.BUS)
     .build();
-  private static final Route BUS_31_LIEPAJA = TimetableRepositoryForTest.route("bus-31-liepaja")
+  private static final Route BUS_31_LIEPAJA = TransitRepositoryForTest.route("bus-31-liepaja")
     .withShortName("31")
     .withLongName(I18NString.of("Ezerkrasts - Karosta"))
     .withRegionName("Liepāja")
     .withMode(TransitMode.BUS)
     .build();
 
-  private static final TripPattern TRAM_5_PATTERN = TimetableRepositoryForTest.tripPattern(
+  private static final TripPattern TRAM_5_PATTERN = TransitRepositoryForTest.tripPattern(
     "tram-5-pattern",
     TRAM_5
   )
-    .withStopPattern(TimetableRepositoryForTest.stopPattern(DEPO_IELA, CENTRALTIRGUS))
+    .withStopPattern(TransitRepositoryForTest.stopPattern(DEPO_IELA, CENTRALTIRGUS))
     .withName("5 to Ķengarags")
     .withTripPatternName("Caur centru")
     .build();
-  private static final TripPattern TRAM_11_PATTERN = TimetableRepositoryForTest.tripPattern(
+  private static final TripPattern TRAM_11_PATTERN = TransitRepositoryForTest.tripPattern(
     "tram-11-pattern",
     TRAM_11
   )
-    .withStopPattern(TimetableRepositoryForTest.stopPattern(TRAMVAJU_DEPO, CENTRALTIRGUS))
+    .withStopPattern(TransitRepositoryForTest.stopPattern(TRAMVAJU_DEPO, CENTRALTIRGUS))
     .withName("11 to Ausekļa iela")
     .build();
-  private static final TripPattern BUS_5_PATTERN = TimetableRepositoryForTest.tripPattern(
+  private static final TripPattern BUS_5_PATTERN = TransitRepositoryForTest.tripPattern(
     "bus-5-pattern",
     BUS_5
   )
-    .withStopPattern(TimetableRepositoryForTest.stopPattern(LIEPAJAS_OSTA))
+    .withStopPattern(TransitRepositoryForTest.stopPattern(LIEPAJAS_OSTA))
     .withName("5 to Karosta")
     .build();
-  private static final TripPattern BUS_31_RIGA_PATTERN = TimetableRepositoryForTest.tripPattern(
+  private static final TripPattern BUS_31_RIGA_PATTERN = TransitRepositoryForTest.tripPattern(
     "bus-31-riga-pattern",
     BUS_31_RIGA
   )
-    .withStopPattern(TimetableRepositoryForTest.stopPattern(CENTRALTIRGUS))
+    .withStopPattern(TransitRepositoryForTest.stopPattern(CENTRALTIRGUS))
     .withName("31 to Ulbroka")
     .build();
-  private static final TripPattern BUS_31_LIEPAJA_PATTERN = TimetableRepositoryForTest.tripPattern(
+  private static final TripPattern BUS_31_LIEPAJA_PATTERN = TransitRepositoryForTest.tripPattern(
     "bus-31-liepaja-pattern",
     BUS_31_LIEPAJA
   )
-    .withStopPattern(TimetableRepositoryForTest.stopPattern(LIEPAJAS_OSTA))
+    .withStopPattern(TransitRepositoryForTest.stopPattern(LIEPAJAS_OSTA))
     .withName("31 to Karosta")
     .build();
 
@@ -147,8 +147,8 @@ class LuceneIndexSearchTest {
       RIGA_PRAGAS,
       BOTANISKAIS
     ).forEach(siteRepository::withRegularStop);
-    var timetableRepository = new TimetableRepository(siteRepository.build());
-    timetableRepository.index();
+    var transitRepository = new TransitRepository(siteRepository.build());
+    transitRepository.index();
 
     var patterns = List.of(
       TRAM_5_PATTERN,
@@ -157,7 +157,7 @@ class LuceneIndexSearchTest {
       BUS_31_RIGA_PATTERN,
       BUS_31_LIEPAJA_PATTERN
     );
-    var transitService = new DefaultTransitService(timetableRepository) {
+    var transitService = new DefaultTransitService(transitRepository) {
       @Override
       public Collection<Route> listRoutes() {
         return List.of(TRAM_5, TRAM_11, BUS_5, BUS_31_RIGA, BUS_31_LIEPAJA);
@@ -173,7 +173,7 @@ class LuceneIndexSearchTest {
     };
     var stopConsolidationService = new DefaultStopConsolidationService(
       new DefaultStopConsolidationRepository(),
-      timetableRepository
+      transitRepository
     );
     index = new LuceneIndex(transitService, stopConsolidationService);
   }

@@ -1,23 +1,24 @@
 package org.opentripplanner.raptor.rangeraptor.transit;
 
 import java.util.Iterator;
-import org.opentripplanner.raptor.api.model.RaptorConstants;
-import org.opentripplanner.raptor.api.model.RaptorTransfer;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
-import org.opentripplanner.raptor.api.model.SearchDirection;
 import org.opentripplanner.raptor.api.request.RaptorTuningParameters;
 import org.opentripplanner.raptor.api.request.SearchParams;
 import org.opentripplanner.raptor.spi.IntIterator;
+import org.opentripplanner.raptor.spi.IntIterators;
+import org.opentripplanner.raptor.spi.RaptorConstants;
 import org.opentripplanner.raptor.spi.RaptorConstrainedBoardingSearch;
 import org.opentripplanner.raptor.spi.RaptorTimeTable;
+import org.opentripplanner.raptor.spi.RaptorTransfer;
 import org.opentripplanner.raptor.spi.RaptorTransitDataProvider;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 import org.opentripplanner.raptor.spi.RaptorTripScheduleSearch;
-import org.opentripplanner.raptor.util.IntIterators;
+import org.opentripplanner.raptor.spi.SearchDirection;
 import org.opentripplanner.utils.time.TimeUtils;
 
 public final class ReverseRaptorTransitCalculator<T extends RaptorTripSchedule>
   extends ReverseTransitCalculator<T>
-  implements RaptorTransitCalculator<T> {
+  implements RaptorTransitCalculator<T>
+{
 
   private final int latestArrivalTime;
   private final int searchWindowInSeconds;
@@ -43,10 +44,10 @@ public final class ReverseRaptorTransitCalculator<T extends RaptorTripSchedule>
   ) {
     this.latestArrivalTime = latestArrivalTime;
     this.searchWindowInSeconds = searchWindowInSeconds;
-    this.earliestAcceptableDepartureTime = earliestAcceptableDepartureTime ==
-      RaptorConstants.TIME_NOT_SET
-      ? unreachedTime()
-      : earliestAcceptableDepartureTime;
+    this.earliestAcceptableDepartureTime =
+      earliestAcceptableDepartureTime == RaptorConstants.TIME_NOT_SET
+        ? unreachedTime()
+        : earliestAcceptableDepartureTime;
     this.iterationStep = iterationStep;
   }
 

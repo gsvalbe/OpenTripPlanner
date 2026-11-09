@@ -2,9 +2,9 @@ package org.opentripplanner.raptor.rangeraptor.multicriteria.arrivals;
 
 import java.util.List;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
 import org.opentripplanner.raptor.api.view.ArrivalView;
 import org.opentripplanner.raptor.rangeraptor.path.DestinationArrivalPaths;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 import org.opentripplanner.raptor.util.paretoset.ParetoSetEventListener;
 
 /**
@@ -13,8 +13,8 @@ import org.opentripplanner.raptor.util.paretoset.ParetoSetEventListener;
  *
  * @param <T> The TripSchedule type defined by the user of the raptor API.
  */
-class CalculateTransferToDestination<T extends RaptorTripSchedule>
-  implements ParetoSetEventListener<ArrivalView<T>> {
+class CalculateTransferToDestination<T extends RaptorTripSchedule> implements
+  ParetoSetEventListener<ArrivalView<T>> {
 
   private final List<RaptorAccessEgress> egressPaths;
   private final DestinationArrivalPaths<T> destinationArrivals;
@@ -58,7 +58,7 @@ class CalculateTransferToDestination<T extends RaptorTripSchedule>
 
   private void addOnStreetArrivalToDestination(ArrivalView<T> newElement) {
     for (RaptorAccessEgress egress : egressPaths) {
-      if (egress.stopReachedOnBoard()) {
+      if (egress.arrivedOnBoard()) {
         destinationArrivals.add(newElement, egress);
       }
     }

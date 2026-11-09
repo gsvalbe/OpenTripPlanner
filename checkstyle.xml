@@ -20,7 +20,9 @@
         <module name="TrailingComment">
             <property name="format" value="^\s*$"/>
         </module>
-        <module name="UnusedImports"/>
         <module name="UnusedLocalVariable"/>
+        <module name="PackageDeclaration">
+            <property name="matchDirectoryStructure" value="true"/>
+        </module>
     </module>
 </module>

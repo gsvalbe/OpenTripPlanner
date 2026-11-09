@@ -34,7 +34,7 @@ import org.opentripplanner.graph_builder.module.TimeZoneAdjusterModule;
 import org.opentripplanner.graph_builder.module.TripPatternNamer;
 import org.opentripplanner.graph_builder.module.TurnRestrictionModule;
 import org.opentripplanner.graph_builder.module.geometry.CalculateWorldEnvelopeModule;
-import org.opentripplanner.graph_builder.module.islandpruning.PruneIslands;
+import org.opentripplanner.graph_builder.module.islandpruning.IslandPruningModule;
 import org.opentripplanner.graph_builder.module.ned.ElevationModule;
 import org.opentripplanner.graph_builder.module.osm.OsmModule;
 import org.opentripplanner.graph_builder.module.stopconnectivity.StopConnectivityModule;
@@ -53,7 +53,7 @@ import org.opentripplanner.street.StreetRepository;
 import org.opentripplanner.street.graph.Graph;
 import org.opentripplanner.street.linking.VertexLinker;
 import org.opentripplanner.transfer.regular.TransferRepository;
-import org.opentripplanner.transit.service.TimetableRepository;
+import org.opentripplanner.transit.service.TransitRepository;
 
 @Singleton
 @Component(
@@ -82,7 +82,7 @@ public interface GraphBuilderFactory {
   NetexModule netexModule();
   OsmBoardingLocationsModule osmBoardingLocationsModule();
   OsmModule osmModule();
-  PruneIslands pruneIslands();
+  IslandPruningModule pruneIslands();
   StopConnectivityModule stopConnectivityModule();
   StreetLinkerModule streetLinkerModule();
   TimeZoneAdjusterModule timeZoneAdjusterModule();
@@ -120,7 +120,7 @@ public interface GraphBuilderFactory {
     Builder graph(Graph graph);
 
     @BindsInstance
-    Builder timetableRepository(TimetableRepository timetableRepository);
+    Builder transitRepository(TransitRepository transitRepository);
 
     @BindsInstance
     Builder transferRepository(TransferRepository transferRepository);

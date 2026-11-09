@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.opentripplanner.apis.gtfs.model.SearchResultModel;
 import org.opentripplanner.core.model.i18n.I18NString;
 import org.opentripplanner.core.model.i18n.TranslatedString;
-import org.opentripplanner.transit.model._data.TimetableRepositoryForTest;
+import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.site.RegularStop;
@@ -19,7 +19,7 @@ import org.opentripplanner.transit.model.site.RegularStop;
  */
 class SearchResultImplTest {
 
-  private static final TimetableRepositoryForTest TEST_MODEL = TimetableRepositoryForTest.of();
+  private static final TransitRepositoryForTest TEST_MODEL = TransitRepositoryForTest.of();
   private static final SearchResultImpl SUBJECT = new SearchResultImpl();
 
   private static String nameOf(Object item, Map<String, Object> args) throws Exception {
@@ -54,7 +54,7 @@ class SearchResultImplTest {
 
   @Test
   void routeWithoutShortNameFallsBackToLongName() throws Exception {
-    var route = TimetableRepositoryForTest.route("tram-x")
+    var route = TransitRepositoryForTest.route("tram-x")
       .withShortName(null)
       .withMode(TransitMode.TRAM)
       .withLongName(I18NString.of("Centrs - Ķengarags"))
@@ -65,9 +65,9 @@ class SearchResultImplTest {
 
   @Test
   void patternUsesItsOwnName() throws Exception {
-    var pattern = TimetableRepositoryForTest.tripPattern("tram-5-pattern", route("5", null))
+    var pattern = TransitRepositoryForTest.tripPattern("tram-5-pattern", route("5", null))
       .withStopPattern(
-        TimetableRepositoryForTest.stopPattern(
+        TransitRepositoryForTest.stopPattern(
           TEST_MODEL.stop("A").build(),
           TEST_MODEL.stop("B").build()
         )
@@ -84,9 +84,9 @@ class SearchResultImplTest {
    */
   @Test
   void unnamedPatternFallsBackToItsRoute() throws Exception {
-    var pattern = TimetableRepositoryForTest.tripPattern("tram-5-pattern", route("5", null))
+    var pattern = TransitRepositoryForTest.tripPattern("tram-5-pattern", route("5", null))
       .withStopPattern(
-        TimetableRepositoryForTest.stopPattern(
+        TransitRepositoryForTest.stopPattern(
           TEST_MODEL.stop("A").build(),
           TEST_MODEL.stop("B").build()
         )
@@ -110,7 +110,7 @@ class SearchResultImplTest {
   }
 
   private static Route route(String shortName, I18NString longName) {
-    return TimetableRepositoryForTest.route("tram-5")
+    return TransitRepositoryForTest.route("tram-5")
       .withShortName(shortName)
       .withMode(TransitMode.TRAM)
       .withLongName(longName == null ? I18NString.of("Centrs - Ķengarags") : longName)

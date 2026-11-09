@@ -42,7 +42,7 @@ public class PTStopsLayerBuilder extends LayerBuilder<StopOrStation> {
     this.filter = LayerFilters.forType(layerParameters.filterType(), transitService);
   }
 
-  protected List<Geometry> getGeometries(Envelope query) {
+  protected List<Geometry> findGeometries(Envelope query) {
     var regStops = transitService
       .findRegularStopsByBoundingBox(query)
       .stream()

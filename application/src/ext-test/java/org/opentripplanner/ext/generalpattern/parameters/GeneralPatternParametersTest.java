@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Set;
 import org.junit.jupiter.api.Test;
-import org.opentripplanner.transit.model._data.TimetableRepositoryForTest;
+import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.basic.TransitMode;
 
 class GeneralPatternParametersTest {
@@ -35,15 +35,15 @@ class GeneralPatternParametersTest {
 
   @Test
   void defaultIncludesEveryRoute() {
-    var route = TimetableRepositoryForTest.route("R1").withRegionName("Rīga").build();
+    var route = TransitRepositoryForTest.route("R1").withRegionName("Rīga").build();
     assertTrue(GeneralPatternParameters.DEFAULT.includes(route));
   }
 
   @Test
   void excludeByRegionFeedAgencyAndMode() {
-    var cityRoute = TimetableRepositoryForTest.route("R1").withRegionName("Rīga").build();
-    var regional = TimetableRepositoryForTest.route("R2").withRegionName("Sigulda").build();
-    var rail = TimetableRepositoryForTest.route("R3").withMode(TransitMode.RAIL).build();
+    var cityRoute = TransitRepositoryForTest.route("R1").withRegionName("Rīga").build();
+    var regional = TransitRepositoryForTest.route("R2").withRegionName("Sigulda").build();
+    var rail = TransitRepositoryForTest.route("R3").withMode(TransitMode.RAIL).build();
 
     var byRegion = excluding(Set.of("Rīga"), Set.of(), Set.of(), Set.of());
     assertFalse(byRegion.includes(cityRoute));

@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.opentripplanner.model.PickDrop;
 import org.opentripplanner.model.StopTimesInPattern;
@@ -46,13 +47,13 @@ public class StopTimesHelper {
    * <p>
    * TODO: Add frequency based trips
    *
-   * @param stop                  Stop object to perform the search for
-   * @param startTime             Start time for the search.
-   * @param timeRange             Searches forward for timeRange from startTime
-   * @param numberOfDeparturesPerPattern    Number of departures to fetch per pattern
-   * @param arrivalDeparture      Filter by arrivals, departures, or both
-   * @param includeCancelledTrips If true, cancelled trips will also be included in result
-   * @param tripTimeOnDateMatcher An optional matcher to filter out trip times
+   * @param stop                         Stop object to perform the search for
+   * @param startTime                    Start time for the search.
+   * @param timeRange                    Searches forward for timeRange from startTime
+   * @param numberOfDeparturesPerPattern Number of departures to fetch per pattern
+   * @param arrivalDeparture             Filter by arrivals, departures, or both
+   * @param includeCancelledTrips        If true, cancelled trips will also be included in result
+   * @param tripTimeOnDateMatcher        An optional matcher to filter out trip times
    */
   List<StopTimesInPattern> stopTimesForStop(
     StopLocation stop,
@@ -94,6 +95,16 @@ public class StopTimesHelper {
 
   List<TripTimeOnDate> findTripTimesOnDate(TripTimeOnDateRequest request) {
     Matcher<TripTimeOnDate> matcher = TripTimeOnDateMatcherFactory.of(request);
+    Stream<TripTimeOnDate> tripTimes = request.serviceDateRanges().isEmpty()
+      ? findTripTimesInTimeWindow(request, matcher)
+      : findTripTimesInServiceDateRanges(request, matcher);
+    return tripTimes.sorted(request.sortOrder()).limit(request.numberOfDepartures()).toList();
+  }
+
+  private Stream<TripTimeOnDate> findTripTimesInTimeWindow(
+    TripTimeOnDateRequest request,
+    Matcher<TripTimeOnDate> matcher
+  ) {
     return request
       .stopLocations()
       .stream()
@@ -104,16 +115,48 @@ public class StopTimesHelper {
           request.timeWindow(),
           request.numberOfDepartures(),
           request.arrivalDeparture(),
-          true,
+          request.cancellationPolicy().includesCancellations(),
           request.sortOrder(),
           matcher
         )
           .stream()
           .flatMap(st -> st.times.stream())
+      );
+  }
+
+  /**
+   * Find trip times limited by service date instead of a time window. All trip times at the
+   * requested stops whose service date falls within any of the requested ranges are returned,
+   * filtered by the given matcher.
+   */
+  private Stream<TripTimeOnDate> findTripTimesInServiceDateRanges(
+    TripTimeOnDateRequest request,
+    Matcher<TripTimeOnDate> matcher
+  ) {
+    boolean includeCancellations = request.cancellationPolicy().includesCancellations();
+    ZoneId zone = transitService.getTimeZone();
+    LocalDate defaultStart = ServiceDateUtils.asServiceDay(
+      ServiceDateUtils.asStartOfService(transitService.getTransitServiceStarts(), zone)
+    );
+    LocalDate defaultEndExclusive = ServiceDateUtils.asServiceDay(
+      ServiceDateUtils.asStartOfService(transitService.getTransitServiceEnds(), zone)
+    ).plusDays(1);
+    return request
+      .serviceDateRanges()
+      .stream()
+      .flatMap(range -> range.asLocalDates(defaultStart, defaultEndExclusive).stream())
+      .distinct()
+      .flatMap(serviceDate ->
+        request
+          .stopLocations()
+          .stream()
+          .flatMap(stop ->
+            stopTimesForStop(stop, serviceDate, request.arrivalDeparture(), includeCancellations)
+              .stream()
+              .flatMap(st -> st.times.stream())
+          )
       )
-      .sorted(request.sortOrder())
-      .limit(request.numberOfDepartures())
-      .toList();
+      .filter(matcher::match);
   }
 
   /**
@@ -173,15 +216,16 @@ public class StopTimesHelper {
    * <p>
    * TODO: Add frequency based trips
    *
-   * @param stop                 Stop object to perform the search for
-   * @param pattern              Pattern object to perform the search for
-   * @param startTime            Start time for the search.
-   * @param timeRange            Searches forward for timeRange from startTime
-   * @param numberOfDeparturesPerPattern   Number of departures to fetch per pattern
-   * @param arrivalDeparture     Filter by arrivals, departures, or both.
-   * @param includeCancellations If the result should include those trip times where either the entire
-   *                             trip or the stop at the given stop location has been cancelled.
-   *                             Deleted trips are never returned no matter the value of this parameter.
+   * @param stop                         Stop object to perform the search for
+   * @param pattern                      Pattern object to perform the search for
+   * @param startTime                    Start time for the search.
+   * @param timeRange                    Searches forward for timeRange from startTime
+   * @param numberOfDeparturesPerPattern Number of departures to fetch per pattern
+   * @param arrivalDeparture             Filter by arrivals, departures, or both.
+   * @param includeCancellations         If the result should include those trip times where either
+   *                                     the entire trip or the stop at the given stop location has
+   *                                     been cancelled. Deleted trips are never returned no matter
+   *                                     the value of this parameter.
    */
   List<TripTimeOnDate> stopTimesForPatternAtStop(
     StopLocation stop,

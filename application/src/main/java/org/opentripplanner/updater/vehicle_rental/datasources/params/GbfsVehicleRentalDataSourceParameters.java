@@ -3,6 +3,7 @@ package org.opentripplanner.updater.vehicle_rental.datasources.params;
 import java.util.Objects;
 import java.util.Set;
 import org.opentripplanner.framework.io.HttpHeaders;
+import org.opentripplanner.gbfs.GbfsDataSourceParameters;
 import org.opentripplanner.updater.vehicle_rental.VehicleRentalSourceType;
 
 public record GbfsVehicleRentalDataSourceParameters(
@@ -12,9 +13,10 @@ public record GbfsVehicleRentalDataSourceParameters(
   HttpHeaders httpHeaders,
   String network,
   boolean geofencingZones,
+  boolean requireDropOffInsideBusinessArea,
   boolean overloadingAllowed,
   Set<RentalPickupType> rentalPickupTypes
-) implements VehicleRentalDataSourceParameters {
+) implements VehicleRentalDataSourceParameters, GbfsDataSourceParameters {
   public GbfsVehicleRentalDataSourceParameters {
     Objects.requireNonNull(rentalPickupTypes);
   }
@@ -27,5 +29,20 @@ public record GbfsVehicleRentalDataSourceParameters(
   @Override
   public boolean allowRentalType(RentalPickupType rentalPickupType) {
     return rentalPickupTypes.contains(rentalPickupType);
+  }
+
+  @Override
+  public HttpHeaders httpHeaders() {
+    return httpHeaders;
+  }
+
+  @Override
+  public boolean allowStationRental() {
+    return rentalPickupTypes.contains(RentalPickupType.STATION);
+  }
+
+  @Override
+  public boolean allowFreeFloatingRental() {
+    return rentalPickupTypes.contains(RentalPickupType.FREE_FLOATING);
   }
 }

@@ -14,7 +14,7 @@ import java.util.Objects;
 /**
  * This is for translated strings for which translations are read from OSM or GTFS alerts.
  * <p>
- * This can be translated street names, GTFS alerts and notes.
+ * This can be translated street names, GTFS alerts etc.
  *
  * @author Hannes Junnila
  */
@@ -114,8 +114,9 @@ public class TranslatedString implements I18NString, Serializable {
     if (translations.isEmpty()) {
       throw new IllegalArgumentException("At least one translation must be provided");
     }
-    if (TRANSLATION_CACHE.containsKey(translations)) {
-      return TRANSLATION_CACHE.get(translations);
+    var t = TRANSLATION_CACHE.get(translations);
+    if (t != null) {
+      return t;
     } else {
       I18NString ret;
       // Check if we only have one name, even under multiple languages
@@ -145,7 +146,7 @@ public class TranslatedString implements I18NString, Serializable {
   @Override
   public boolean equals(Object other) {
     return (
-      (other instanceof TranslatedString) &&
+      other instanceof TranslatedString &&
       this.translations.equals(((TranslatedString) other).translations)
     );
   }

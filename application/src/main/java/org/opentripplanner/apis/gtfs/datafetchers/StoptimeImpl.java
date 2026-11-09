@@ -5,7 +5,7 @@ import static org.opentripplanner.apis.gtfs.GraphQLUtils.toGraphQL;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.opentripplanner.apis.gtfs.GraphQLRequestContext;
+import org.opentripplanner.apis.gtfs.GtfsGraphQLRequestContext;
 import org.opentripplanner.apis.gtfs.generated.GraphQLDataFetchers;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes;
 import org.opentripplanner.apis.gtfs.mapping.PickDropMapper;
@@ -65,7 +65,7 @@ public class StoptimeImpl implements GraphQLDataFetchers.GraphQLStoptime {
     return environment ->
       getSource(environment).isCanceledEffectively()
         ? GraphQLTypes.GraphQLRealtimeState.CANCELED
-        : RealtimeStateMapper.map(getSource(environment).getRealTimeState());
+        : RealtimeStateMapper.map(getSource(environment).getTripTimes());
   }
 
   @Override
@@ -146,7 +146,7 @@ public class StoptimeImpl implements GraphQLDataFetchers.GraphQLStoptime {
   }
 
   private TransitService getTransitService(DataFetchingEnvironment environment) {
-    return environment.<GraphQLRequestContext>getContext().transitService();
+    return environment.<GtfsGraphQLRequestContext>getContext().transitService();
   }
 
   private TripTimeOnDate getSource(DataFetchingEnvironment environment) {

@@ -5,6 +5,7 @@ import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNonNull;
+import org.opentripplanner.apis.transmodel.model.ModeAndSubModeInputType;
 
 public class SelectInputType {
 
@@ -38,6 +39,7 @@ public class SelectInputType {
           "Set of ids for service journeys that should be included in/excluded from search"
         )
         .type(new GraphQLList(new GraphQLNonNull(Scalars.GraphQLID)))
+        .deprecate("This field is not implemented and has no effect.")
         .build()
     )
     .field(

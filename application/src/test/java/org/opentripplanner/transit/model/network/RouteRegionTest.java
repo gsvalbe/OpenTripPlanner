@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.street.geometry.WgsCoordinate;
-import org.opentripplanner.transit.model.basic.WgsBoundingBox;
 
 class RouteRegionTest {
 

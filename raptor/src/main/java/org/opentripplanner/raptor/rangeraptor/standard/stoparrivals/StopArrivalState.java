@@ -1,8 +1,8 @@
 package org.opentripplanner.raptor.rangeraptor.standard.stoparrivals;
 
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorTransfer;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
+import org.opentripplanner.raptor.spi.RaptorTransfer;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 
 public interface StopArrivalState<T extends RaptorTripSchedule> {
   static <T extends RaptorTripSchedule> StopArrivalState<T> create() {
@@ -21,9 +21,6 @@ public interface StopArrivalState<T extends RaptorTripSchedule> {
   boolean reachedOnBoard();
 
   /* Access */
-
-  /** Stop arrival reached, at least one time (any round/iteration). */
-  boolean reachedOnStreet();
 
   /**
    * Return true is the best option is an access arrival.
@@ -56,9 +53,9 @@ public interface StopArrivalState<T extends RaptorTripSchedule> {
 
   int boardTime();
 
-  int boardStop();
+  int boardStopPosition();
 
-  void arriveByTransit(int arrivalTime, int boardStop, int boardTime, T trip);
+  void arriveByTransit(int arrivalTime, int boardStopPosition, T trip);
 
   /* Transfer */
 

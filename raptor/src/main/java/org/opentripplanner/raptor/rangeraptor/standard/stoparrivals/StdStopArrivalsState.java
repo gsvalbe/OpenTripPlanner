@@ -2,12 +2,12 @@ package org.opentripplanner.raptor.rangeraptor.standard.stoparrivals;
 
 import java.util.Collection;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorTransfer;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
-import org.opentripplanner.raptor.api.model.TransitArrival;
 import org.opentripplanner.raptor.api.path.RaptorPath;
+import org.opentripplanner.raptor.api.view.TransitArrival;
 import org.opentripplanner.raptor.rangeraptor.path.DestinationArrivalPaths;
 import org.opentripplanner.raptor.rangeraptor.standard.internalapi.StopArrivalsState;
+import org.opentripplanner.raptor.spi.RaptorTransfer;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 
 /**
  * Tracks the state necessary to construct paths at the end of each iteration.
@@ -17,8 +17,8 @@ import org.opentripplanner.raptor.rangeraptor.standard.internalapi.StopArrivalsS
  *
  * @param <T> The TripSchedule type defined by the user of the raptor API.
  */
-public final class StdStopArrivalsState<T extends RaptorTripSchedule>
-  implements StopArrivalsState<T> {
+public final class StdStopArrivalsState<T extends RaptorTripSchedule> implements
+  StopArrivalsState<T> {
 
   private final StdStopArrivals<T> stops;
   private final DestinationArrivalPaths<T> results;
@@ -45,12 +45,11 @@ public final class StdStopArrivalsState<T extends RaptorTripSchedule>
   public void setNewBestTransitTime(
     int stop,
     int alightTime,
+    int boardStopPosition,
     T trip,
-    int boardStop,
-    int boardTime,
     boolean newBestOverall
   ) {
-    stops.transitToStop(stop, alightTime, boardStop, boardTime, trip, newBestOverall);
+    stops.transitToStop(stop, alightTime, boardStopPosition, trip, newBestOverall);
   }
 
   @Override

@@ -31,10 +31,16 @@ import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLVerticalDirec
 import org.opentripplanner.apis.gtfs.model.CallRealTime;
 import org.opentripplanner.apis.gtfs.model.CallSchedule;
 import org.opentripplanner.apis.gtfs.model.CallScheduledTime;
+import org.opentripplanner.apis.gtfs.model.CanceledTripsSummary;
+import org.opentripplanner.apis.gtfs.model.CanceledTripsSummaryPattern;
+import org.opentripplanner.apis.gtfs.model.CanceledTripsSummaryRoute;
 import org.opentripplanner.apis.gtfs.model.FeedPublisher;
+import org.opentripplanner.apis.gtfs.model.OffsetDateTimeRange;
 import org.opentripplanner.apis.gtfs.model.PlanPageInfo;
+import org.opentripplanner.apis.gtfs.model.RealTimeTripStateModel;
 import org.opentripplanner.apis.gtfs.model.RideHailingProvider;
 import org.opentripplanner.apis.gtfs.model.SearchResultModel;
+import org.opentripplanner.apis.gtfs.model.StopCallOnTripOnServiceDate;
 import org.opentripplanner.apis.gtfs.model.StopPosition;
 import org.opentripplanner.apis.gtfs.model.TransferEndpoint;
 import org.opentripplanner.apis.gtfs.model.TripFare;
@@ -56,11 +62,11 @@ import org.opentripplanner.model.plan.leg.LegRealTimeEstimate;
 import org.opentripplanner.model.plan.leg.StopArrival;
 import org.opentripplanner.model.plan.leg.ViaLocationType;
 import org.opentripplanner.model.plan.walkstep.WalkStep;
+import org.opentripplanner.place.api.NearbyStop;
+import org.opentripplanner.place.api.PatternAtStop;
+import org.opentripplanner.place.api.PlaceAtDistance;
 import org.opentripplanner.routing.alertpatch.TransitAlert;
 import org.opentripplanner.routing.api.response.RoutingError;
-import org.opentripplanner.routing.graphfinder.NearbyStop;
-import org.opentripplanner.routing.graphfinder.PatternAtStop;
-import org.opentripplanner.routing.graphfinder.PlaceAtDistance;
 import org.opentripplanner.service.realtimevehicles.model.RealtimeVehicle;
 import org.opentripplanner.service.realtimevehicles.model.RealtimeVehicle.StopRelationship;
 import org.opentripplanner.service.streetdetails.model.Level;
@@ -79,7 +85,7 @@ import org.opentripplanner.service.vehiclerental.model.VehicleRentalVehicle;
 import org.opentripplanner.street.model.openinghours.OHCalendar;
 import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
 import org.opentripplanner.transit.model.basic.Money;
-import org.opentripplanner.transit.model.basic.WgsBoundingBox;
+import org.opentripplanner.transit.model.network.WgsBoundingBox;
 import org.opentripplanner.transit.model.network.ReplacedByRelation;
 import org.opentripplanner.transit.model.network.ReplacementForRelation;
 import org.opentripplanner.transit.model.network.Route;
@@ -110,6 +116,7 @@ public class GraphQLDataFetchers {
 
   /** Alert of a current or upcoming disruption in public transportation */
   public interface GraphQLAlert {
+    DataFetcher<Iterable<OffsetDateTimeRange>> activityPeriods();
     DataFetcher<Agency> agency();
     DataFetcher<GraphQLAlertCauseType> alertCause();
     DataFetcher<String> alertDescriptionText();
@@ -130,6 +137,25 @@ public class GraphQLDataFetchers {
     DataFetcher<Route> route();
     DataFetcher<Object> stop();
     DataFetcher<Trip> trip();
+  }
+
+  /**
+   * A connection to a list of alerts that follows
+   * [GraphQL Cursor Connections Specification](https://relay.dev/graphql/connections.htm).
+   */
+  public interface GraphQLAlertConnection {
+    DataFetcher<Iterable<Edge<TransitAlert>>> edges();
+    DataFetcher<Object> pageInfo();
+    DataFetcher<Integer> totalCount();
+  }
+
+  /**
+   * An edge for the alert connection. Part of the
+   * [GraphQL Cursor Connections Specification](https://relay.dev/graphql/connections.htm).
+   */
+  public interface GraphQLAlertEdge {
+    DataFetcher<String> cursor();
+    DataFetcher<TransitAlert> node();
   }
 
   /** Entity related to an alert */
@@ -229,6 +255,27 @@ public class GraphQLDataFetchers {
 
   /** Location where a transit vehicle stops at. */
   public interface GraphQLCallStopLocation extends TypeResolver {}
+
+  /** Cancellation statistics grouped by entities. */
+  public interface GraphQLCanceledTripsSummary {
+    DataFetcher<Iterable<CanceledTripsSummaryRoute>> routes();
+  }
+
+  /** Contains pattern and the information for how many canceled trips there are for the pattern. */
+  public interface GraphQLCanceledTripsSummaryPattern {
+    DataFetcher<Integer> cancellationCount();
+    DataFetcher<TripPattern> pattern();
+  }
+
+  /**
+   * Contains route, how many canceled trips there are for the route and cancellation statistics grouped
+   * by patterns.
+   */
+  public interface GraphQLCanceledTripsSummaryRoute {
+    DataFetcher<Integer> cancellationCount();
+    DataFetcher<Iterable<CanceledTripsSummaryPattern>> patterns();
+    DataFetcher<Route> route();
+  }
 
   /** Car park represents a location where cars can be parked. */
   public interface GraphQLCarPark {
@@ -346,9 +393,7 @@ public class GraphQLDataFetchers {
     DataFetcher<String> entranceId();
     DataFetcher<String> name();
     DataFetcher<String> publicCode();
-    DataFetcher<
-      org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLWheelchairBoarding
-    > wheelchairAccessible();
+    DataFetcher<org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLWheelchairBoarding> wheelchairAccessible();
   }
 
   /** A single use of an escalator. */
@@ -401,6 +446,7 @@ public class GraphQLDataFetchers {
     DataFetcher<Iterable<TransitAlert>> alerts();
     DataFetcher<String> feedId();
     DataFetcher<FeedPublisher> publisher();
+    DataFetcher<String> version();
   }
 
   /** Feed publisher information */
@@ -475,10 +521,9 @@ public class GraphQLDataFetchers {
     DataFetcher<StopArrival> to();
     DataFetcher<Boolean> transitLeg();
     DataFetcher<Trip> trip();
+    DataFetcher<TripOnServiceDate> tripOnServiceDate();
     DataFetcher<Boolean> walkingBike();
-    DataFetcher<
-      org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLWheelchairBoarding
-    > wheelchairAccessible();
+    DataFetcher<org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLWheelchairBoarding> wheelchairAccessible();
   }
 
   /**
@@ -543,6 +588,28 @@ public class GraphQLDataFetchers {
     }
   }
 
+  /**
+   * A textual message about a transit entity that is already known at planning time.
+   *
+   * It is not intended to convey real-time or emergency updates of the transit system but information that
+   * is known well ahead of time.
+   */
+  public interface GraphQLNotice {
+    DataFetcher<String> text();
+  }
+
+  /**
+   * A range of time which can be unbounded in either direction.
+   *
+   * The start of the range is inclusive and the end is exclusive.
+   * A `null` start means that the range extends indefinitely into the past and a `null` end means
+   * that it extends indefinitely into the future.
+   */
+  public interface GraphQLOffsetDateTimeRange {
+    DataFetcher<java.time.OffsetDateTime> end();
+    DataFetcher<java.time.OffsetDateTime> start();
+  }
+
   public interface GraphQLOpeningHours {
     DataFetcher<Iterable<Object>> dates();
     DataFetcher<String> osm();
@@ -563,6 +630,7 @@ public class GraphQLDataFetchers {
    */
   public interface GraphQLPattern {
     DataFetcher<Iterable<TransitAlert>> alerts();
+    DataFetcher<Iterable<TripOnServiceDate>> canceledTrips();
     DataFetcher<String> code();
     DataFetcher<Integer> directionId();
     DataFetcher<Iterable<Coordinate>> geometry();
@@ -578,6 +646,7 @@ public class GraphQLDataFetchers {
     DataFetcher<GraphQLTripPatternType> tripPatternType();
     DataFetcher<Iterable<Trip>> trips();
     DataFetcher<Iterable<Trip>> tripsForDate();
+    DataFetcher<Iterable<TripOnServiceDate>> tripsOnServiceDate();
     DataFetcher<Iterable<RealtimeVehicle>> vehiclePositions();
   }
 
@@ -679,11 +748,13 @@ public class GraphQLDataFetchers {
     DataFetcher<Iterable<Agency>> agencies();
     DataFetcher<Agency> agency();
     DataFetcher<Iterable<TransitAlert>> alerts();
+    DataFetcher<CountedConnection<TransitAlert>> alertsConnection();
     DataFetcher<VehicleParking> bikePark();
     DataFetcher<Iterable<VehicleParking>> bikeParks();
     DataFetcher<VehicleRentalPlace> bikeRentalStation();
     DataFetcher<Iterable<VehicleRentalPlace>> bikeRentalStations();
     DataFetcher<CountedConnection<TripOnServiceDate>> canceledTrips();
+    DataFetcher<CanceledTripsSummary> canceledTripsSummary();
     DataFetcher<Iterable<TripTimeOnDate>> cancelledTripTimes();
     DataFetcher<VehicleParking> carPark();
     DataFetcher<Iterable<VehicleParking>> carParks();
@@ -697,6 +768,7 @@ public class GraphQLDataFetchers {
     DataFetcher<Object> node();
     DataFetcher<TripPattern> pattern();
     DataFetcher<Iterable<TripPattern>> patterns();
+    DataFetcher<Iterable<TripPattern>> patternsByIds();
     DataFetcher<
       graphql.execution.DataFetcherResult<org.opentripplanner.routing.api.response.RoutingResponse>
     > plan();
@@ -734,6 +806,15 @@ public class GraphQLDataFetchers {
     DataFetcher<java.time.OffsetDateTime> time();
   }
 
+  /** The real-time state of a trip */
+  public interface GraphQLRealTimeTripState {
+    DataFetcher<Boolean> added();
+    DataFetcher<Boolean> canceled();
+    DataFetcher<Boolean> timesModified();
+    DataFetcher<Boolean> tripPatternModified();
+    DataFetcher<Boolean> updated();
+  }
+
   /** Rental place union that represents either a VehicleRentalStation or a RentalVehicle */
   public interface GraphQLRentalPlace extends TypeResolver {}
 
@@ -766,12 +847,8 @@ public class GraphQLDataFetchers {
   }
 
   public interface GraphQLRentalVehicleType {
-    DataFetcher<
-      org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLFormFactor
-    > formFactor();
-    DataFetcher<
-      org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLPropulsionType
-    > propulsionType();
+    DataFetcher<org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLFormFactor> formFactor();
+    DataFetcher<org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLPropulsionType> propulsionType();
   }
 
   public interface GraphQLRentalVehicleTypeCount {
@@ -833,6 +910,7 @@ public class GraphQLDataFetchers {
     DataFetcher<Boolean> isReplacement();
     DataFetcher<String> longName();
     DataFetcher<GraphQLTransitMode> mode();
+    DataFetcher<Iterable<org.opentripplanner.transit.model.basic.Notice>> notices();
     DataFetcher<Iterable<TripPattern>> patterns();
     DataFetcher<String> regionName();
     DataFetcher<Boolean> replacementsExist();
@@ -900,6 +978,7 @@ public class GraphQLDataFetchers {
   public interface GraphQLStop {
     DataFetcher<Iterable<TransitAlert>> alerts();
     DataFetcher<Iterable<GraphQLStopAttribute>> attributes();
+    DataFetcher<Iterable<StopCallOnTripOnServiceDate>> canceledCalls();
     DataFetcher<Object> cluster();
     DataFetcher<String> code();
     DataFetcher<String> desc();
@@ -925,9 +1004,7 @@ public class GraphQLDataFetchers {
     DataFetcher<String> url();
     DataFetcher<String> vehicleMode();
     DataFetcher<Integer> vehicleType();
-    DataFetcher<
-      org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLWheelchairBoarding
-    > wheelchairBoarding();
+    DataFetcher<org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLWheelchairBoarding> wheelchairBoarding();
     DataFetcher<String> zoneId();
   }
 
@@ -938,9 +1015,16 @@ public class GraphQLDataFetchers {
    * This may contain real-time information, if available.
    */
   public interface GraphQLStopCall {
+    DataFetcher<Iterable<org.opentripplanner.transit.model.basic.Notice>> notices();
     DataFetcher<CallRealTime> realTime();
     DataFetcher<CallSchedule> schedule();
     DataFetcher<Object> stopLocation();
+  }
+
+  /** A stop call together with the trip on service date it belongs to. */
+  public interface GraphQLStopCallOnTripOnServiceDate {
+    DataFetcher<TripTimeOnDate> stopCall();
+    DataFetcher<TripOnServiceDate> tripOnServiceDate();
   }
 
   public interface GraphQLStopGeometries {
@@ -989,9 +1073,7 @@ public class GraphQLDataFetchers {
     DataFetcher<Integer> stopPositionInPattern();
     DataFetcher<Boolean> timepoint();
     DataFetcher<Trip> trip();
-    DataFetcher<
-      org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLWheelchairBoarding
-    > wheelchairAccessible();
+    DataFetcher<org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLWheelchairBoarding> wheelchairAccessible();
   }
 
   /** Stoptimes grouped by pattern */
@@ -1062,7 +1144,9 @@ public class GraphQLDataFetchers {
     DataFetcher<graphql.relay.Relay.ResolvedGlobalId> id();
     DataFetcher<Iterable<ConstrainedTransfer>> incomingTransfers();
     DataFetcher<Boolean> isReplacement();
+    DataFetcher<Iterable<org.opentripplanner.transit.model.basic.Notice>> notices();
     DataFetcher<TripOccupancy> occupancy();
+    DataFetcher<TripOnServiceDate> onServiceDate();
     DataFetcher<Iterable<ConstrainedTransfer>> outgoingTransfers();
     DataFetcher<TripPattern> pattern();
     DataFetcher<Boolean> replacementsExist();
@@ -1077,9 +1161,7 @@ public class GraphQLDataFetchers {
     DataFetcher<Geometry> tripGeometry();
     DataFetcher<String> tripHeadsign();
     DataFetcher<String> tripShortName();
-    DataFetcher<
-      org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLWheelchairBoarding
-    > wheelchairAccessible();
+    DataFetcher<org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLWheelchairBoarding> wheelchairAccessible();
   }
 
   /** The fare for travelling on a single trip between two of its stops. */
@@ -1101,6 +1183,7 @@ public class GraphQLDataFetchers {
   public interface GraphQLTripOnServiceDate {
     DataFetcher<TripTimeOnDate> end();
     DataFetcher<Boolean> isReplacement();
+    DataFetcher<RealTimeTripStateModel> realTimeTripState();
     DataFetcher<Iterable<ReplacedByRelation>> replacedByRelation();
     DataFetcher<Iterable<ReplacementForRelation>> replacementForRelation();
     DataFetcher<java.time.LocalDate> serviceDate();
@@ -1295,7 +1378,7 @@ public class GraphQLDataFetchers {
     DataFetcher<Boolean> bogusName();
     DataFetcher<Double> distance();
     DataFetcher<
-      Iterable<org.opentripplanner.model.plan.leg.ElevationProfile.Step>
+      Iterable<org.opentripplanner.street.model.elevation.ElevationProfile.Step>
     > elevationProfile();
     DataFetcher<String> exit();
     DataFetcher<Object> feature();

@@ -1,11 +1,11 @@
 package org.opentripplanner.transit.service;
 
-import static org.opentripplanner.transit.model._data.TimetableRepositoryForTest.route;
-import static org.opentripplanner.transit.model._data.TimetableRepositoryForTest.stopPattern;
-import static org.opentripplanner.transit.model._data.TimetableRepositoryForTest.tripPattern;
+import static org.opentripplanner.transit.model._data.TransitRepositoryForTest.route;
+import static org.opentripplanner.transit.model._data.TransitRepositoryForTest.stopPattern;
+import static org.opentripplanner.transit.model._data.TransitRepositoryForTest.tripPattern;
 
 import java.util.List;
-import org.opentripplanner.transit.model._data.TimetableRepositoryForTest;
+import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.site.RegularStop;
 
@@ -19,7 +19,7 @@ public class RouteRegionsTestModel {
   public static final String RIGA_CENTER = "Riga Center";
   public static final String JURMALA = "Jurmala";
 
-  private static final TimetableRepositoryForTest MODEL = TimetableRepositoryForTest.of();
+  private static final TransitRepositoryForTest MODEL = TransitRepositoryForTest.of();
 
   private static final RegularStop RIGA_SOUTH_WEST = MODEL.stop("RSW", 56.90, 24.00).build();
   private static final RegularStop RIGA_NORTH_EAST = MODEL.stop("RNE", 57.00, 24.20).build();
@@ -34,21 +34,21 @@ public class RouteRegionsTestModel {
         List.of(RIGA_SOUTH_WEST, RIGA_NORTH_EAST, CENTER_1, CENTER_2, JURMALA_WEST, JURMALA_EAST)
       )
       .build();
-    var timetableRepository = new TimetableRepository(siteRepository);
+    var transitRepository = new TransitRepository(siteRepository);
 
     // Two routes in "Riga", the region bounds should cover both
-    addPattern(timetableRepository, "R1", RIGA, RIGA_SOUTH_WEST, CENTER_1);
-    addPattern(timetableRepository, "R2", RIGA, CENTER_2, RIGA_NORTH_EAST);
-    addPattern(timetableRepository, "C", RIGA_CENTER, CENTER_1, CENTER_2);
-    addPattern(timetableRepository, "J", JURMALA, JURMALA_WEST, JURMALA_EAST);
-    addPattern(timetableRepository, "X", null, JURMALA_WEST, RIGA_NORTH_EAST);
+    addPattern(transitRepository, "R1", RIGA, RIGA_SOUTH_WEST, CENTER_1);
+    addPattern(transitRepository, "R2", RIGA, CENTER_2, RIGA_NORTH_EAST);
+    addPattern(transitRepository, "C", RIGA_CENTER, CENTER_1, CENTER_2);
+    addPattern(transitRepository, "J", JURMALA, JURMALA_WEST, JURMALA_EAST);
+    addPattern(transitRepository, "X", null, JURMALA_WEST, RIGA_NORTH_EAST);
 
-    timetableRepository.index();
-    return new DefaultTransitService(timetableRepository);
+    transitRepository.index();
+    return new DefaultTransitService(transitRepository);
   }
 
   private static void addPattern(
-    TimetableRepository repository,
+    TransitRepository repository,
     String id,
     String regionName,
     RegularStop... stops

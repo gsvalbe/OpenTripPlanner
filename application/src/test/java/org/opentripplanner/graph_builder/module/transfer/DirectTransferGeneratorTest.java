@@ -6,7 +6,7 @@ import static org.opentripplanner.graph_builder.module.transfer.PathTransferToSt
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.framework.application.OTPFeature;
-import org.opentripplanner.graph_builder.module.TransferParameters;
+import org.opentripplanner.graph_builder.module.transfer.api.TransferParametersForMode;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.request.StreetRequest;
 import org.opentripplanner.street.model.StreetMode;
@@ -24,12 +24,8 @@ class DirectTransferGeneratorTest {
   private static final RouteRequest REQUEST_WITH_BIKE_TRANSFER = RouteRequest.of()
     .withJourney(jb -> jb.withTransfer(new StreetRequest(StreetMode.BIKE)))
     .buildDefault();
-  private static final TransferParameters TX_BIKES_ALLOWED_1_h = new TransferParameters(
-    null,
-    null,
-    Duration.parse("PT1H"),
-    true
-  );
+  private static final TransferParametersForMode TX_BIKES_ALLOWED_1_h =
+    new TransferParametersForMode(null, null, Duration.parse("PT1H"), true);
 
   @Test
   public void testStraightLineTransfersWithNoPatterns() {
@@ -239,9 +235,9 @@ class DirectTransferGeneratorTest {
     // S11, S13, S21 -> *   No patterns alight here
     // * -> S0, S12, S23    No patterns board here
     String expectedWalkAndBike = """
-       S0 - S11, 100m
-       S0 - S21, 100m
-      S12 - S22, 110m""";
+     S0 - S11, 100m
+     S0 - S21, 100m
+    S12 - S22, 110m""";
     assertEquals(expectedWalkAndBike, pathToString(walkTransfers));
     assertEquals(expectedWalkAndBike, pathToString(bikeTransfers));
     assertEquals("<Empty>", pathToString(carTransfers));

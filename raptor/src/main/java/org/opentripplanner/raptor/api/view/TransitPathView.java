@@ -1,12 +1,12 @@
 package org.opentripplanner.raptor.api.view;
 
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 
 public interface TransitPathView<T extends RaptorTripSchedule> {
   /**
-   * Stop index where the transit path was boarded.
+   * Stop position in the pattern where the transit path was boarded.
    */
-  int boardStop();
+  int boardStopPosition();
 
   /**
    * Trip used for transit.

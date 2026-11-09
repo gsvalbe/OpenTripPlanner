@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.ToIntFunction;
 import java.util.regex.Pattern;
+import org.opentripplanner.raptor.spi.RaptorConstants;
 import org.opentripplanner.utils.lang.StringUtils;
 import org.opentripplanner.utils.time.DurationUtils;
 import org.opentripplanner.utils.time.TimeUtils;
@@ -44,10 +45,6 @@ public final class RaptorAccessEgressToStringParser {
     return new RaptorAccessEgressToStringParser(stopIndexResolver, input).parse();
   }
 
-  public String label() {
-    return label;
-  }
-
   public int stopIndex() {
     return stopIndex;
   }
@@ -60,7 +57,7 @@ public final class RaptorAccessEgressToStringParser {
     return free;
   }
 
-  public boolean isStopReachedOnBoard() {
+  public boolean arrivedOnBoard() {
     return stopReachedOnBoard;
   }
 
@@ -93,7 +90,7 @@ public final class RaptorAccessEgressToStringParser {
       throw new IllegalArgumentException("'" + input + "' does not match :/" + PARSE_INPUT + "'");
     }
     var stopValue = m.group(4);
-    this.stopIndex = (stopValue.matches("\\d+"))
+    this.stopIndex = stopValue.matches("\\d+")
       ? Integer.parseInt(stopValue)
       : stopIndexResolver.applyAsInt(stopValue);
 

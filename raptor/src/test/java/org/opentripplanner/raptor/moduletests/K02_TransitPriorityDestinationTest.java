@@ -21,12 +21,12 @@ import org.opentripplanner.raptor.RaptorService;
 import org.opentripplanner.raptor._data.transit.TestTransitData;
 import org.opentripplanner.raptor._data.transit.TestTripPattern;
 import org.opentripplanner.raptor._data.transit.TestTripSchedule;
-import org.opentripplanner.raptor.api.model.RaptorCostConverter;
 import org.opentripplanner.raptor.api.request.RaptorProfile;
 import org.opentripplanner.raptor.api.request.RaptorRequestBuilder;
 import org.opentripplanner.raptor.api.request.RaptorTransitGroupPriorityCalculator;
 import org.opentripplanner.raptor.api.request.TestGroupPriorityCalculator;
 import org.opentripplanner.raptor.configure.RaptorTestFactory;
+import org.opentripplanner.raptor.spi.RaptorCostConverter;
 
 /**
  * FEATURE UNDER TEST
@@ -85,8 +85,8 @@ public class K02_TransitPriorityDestinationTest {
       .timetable(true);
 
     requestBuilder.withMultiCriteria(mc ->
-      // Raptor cost 9000 ~= 90 seconds slack
       mc
+        // Raptor cost 9000 ~= 90 seconds slack
         .withRelaxC1(value -> value + C1_SLACK_90_s)
         .withTransitPriorityCalculator(PRIORITY_GROUP_CALCULATOR)
     );

@@ -21,8 +21,8 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
-import org.opentripplanner.apis.gtfs.GraphQLRequestContext;
 import org.opentripplanner.apis.gtfs.GraphQLUtils;
+import org.opentripplanner.apis.gtfs.GtfsGraphQLRequestContext;
 import org.opentripplanner.apis.gtfs.generated.GraphQLDataFetchers;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes.GraphQLBikesAllowed;
@@ -31,10 +31,10 @@ import org.opentripplanner.apis.gtfs.mapping.BikesAllowedMapper;
 import org.opentripplanner.apis.gtfs.mapping.CarsAllowedMapper;
 import org.opentripplanner.apis.gtfs.model.TripFare;
 import org.opentripplanner.apis.gtfs.model.TripOccupancy;
+import org.opentripplanner.apis.gtfs.service.ApiTransitService;
 import org.opentripplanner.apis.support.SemanticHash;
 import org.opentripplanner.core.model.basic.Cost;
 import org.opentripplanner.core.model.id.FeedScopedId;
-import org.opentripplanner.ext.fares.ItineraryFaresDecorator;
 import org.opentripplanner.model.TripTimeOnDate;
 import org.opentripplanner.model.fare.FareOffer;
 import org.opentripplanner.model.fare.ItineraryFare;
@@ -47,6 +47,7 @@ import org.opentripplanner.routing.fares.StopFareIdentity;
 import org.opentripplanner.routing.services.TransitAlertService;
 import org.opentripplanner.service.realtimevehicles.RealtimeVehicleService;
 import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
+import org.opentripplanner.transit.model.basic.Notice;
 import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.organization.Agency;
@@ -54,8 +55,10 @@ import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.model.timetable.Direction;
 import org.opentripplanner.transit.model.timetable.Timetable;
 import org.opentripplanner.transit.model.timetable.Trip;
+import org.opentripplanner.transit.model.timetable.TripOnServiceDate;
 import org.opentripplanner.transit.model.timetable.TripTimes;
 import org.opentripplanner.transit.service.TransitService;
+import org.opentripplanner.utils.collection.ListUtils;
 import org.opentripplanner.utils.time.ServiceDateUtils;
 
 public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
@@ -64,9 +67,10 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
   public DataFetcher<Iterable<String>> activeDates() {
     return environment ->
       getTransitService(environment)
-        .getCalendarService()
-        .getServiceDatesForServiceId(getSource(environment).getServiceId())
+        .getTripCalendars()
+        .listServiceDates(getSource(environment).getServiceId())
         .stream()
+        .sorted()
         .map(ServiceDateUtils::asCompactString)
         .collect(Collectors.toList());
   }
@@ -74,7 +78,7 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
   @Override
   public DataFetcher<Iterable<TransitAlert>> alerts() {
     return environment -> {
-      TransitAlertService alertService = getTransitService(environment).getTransitAlertService();
+      TransitAlertService alertService = getTransitAlertService(environment);
       var args = new GraphQLTypes.GraphQLTripAlertsArgs(environment.getArguments());
       List<GraphQLTypes.GraphQLTripAlertType> types = args.getGraphQLTypes();
       if (types != null) {
@@ -130,8 +134,10 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
                   .toList()
               );
               getStops(environment).forEach(stop -> {
-                FeedScopedId stopId = ((StopLocation) stop).getId();
-                alerts.addAll(alertService.getStopAlerts(stopId));
+                StopLocation stopLocation = (StopLocation) stop;
+                alerts.addAll(
+                  alertService.getStopLocationsAlerts(stopLocation.getIdAndParentStationId())
+                );
               });
               break;
           }
@@ -152,9 +158,10 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
         var args = new GraphQLTypes.GraphQLTripArrivalStoptimeArgs(environment.getArguments());
 
         ZoneId timeZone = transitService.getTimeZone();
-        LocalDate serviceDate = args.getGraphQLServiceDate() != null
-          ? ServiceDateUtils.parseString(args.getGraphQLServiceDate())
-          : LocalDate.now();
+        LocalDate serviceDate =
+          args.getGraphQLServiceDate() != null
+            ? ServiceDateUtils.parseString(args.getGraphQLServiceDate())
+            : LocalDate.now();
 
         TripPattern tripPattern = transitService.findPattern(trip, serviceDate);
         if (tripPattern == null) {
@@ -207,9 +214,10 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
         var args = new GraphQLTypes.GraphQLTripDepartureStoptimeArgs(environment.getArguments());
 
         ZoneId timeZone = transitService.getTimeZone();
-        LocalDate serviceDate = args.getGraphQLServiceDate() != null
-          ? ServiceDateUtils.parseString(args.getGraphQLServiceDate())
-          : LocalDate.now();
+        LocalDate serviceDate =
+          args.getGraphQLServiceDate() != null
+            ? ServiceDateUtils.parseString(args.getGraphQLServiceDate())
+            : LocalDate.now();
 
         TripPattern tripPattern = transitService.findPattern(trip, serviceDate);
         if (tripPattern == null) {
@@ -326,6 +334,24 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
   }
 
   @Override
+  public DataFetcher<Iterable<Notice>> notices() {
+    return env -> getTransitService(env).findNotices(getSource(env));
+  }
+
+  @Override
+  public DataFetcher<TripOnServiceDate> onServiceDate() {
+    return environment -> {
+      Trip trip = getSource(environment);
+      var args = new GraphQLTypes.GraphQLTripOnServiceDateArgs(environment.getArguments());
+      LocalDate serviceDate = args.getGraphQLDate();
+
+      return new ApiTransitService(getTransitService(environment))
+        .findOrCreateTripOnServiceDate(trip.getId(), serviceDate)
+        .orElse(null);
+    };
+  }
+
+  @Override
   public DataFetcher<TripPattern> pattern() {
     return this::getTripPattern;
   }
@@ -395,9 +421,10 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
         var args = new GraphQLTypes.GraphQLTripStoptimesForDateArgs(environment.getArguments());
 
         ZoneId timeZone = transitService.getTimeZone();
-        LocalDate serviceDate = args.getGraphQLServiceDate() != null
-          ? ServiceDateUtils.parseString(args.getGraphQLServiceDate())
-          : LocalDate.now(timeZone);
+        LocalDate serviceDate =
+          args.getGraphQLServiceDate() != null
+            ? ServiceDateUtils.parseString(args.getGraphQLServiceDate())
+            : LocalDate.now(timeZone);
 
         TripPattern tripPattern = transitService.findPattern(trip, serviceDate);
         if (tripPattern == null) {
@@ -483,9 +510,10 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
     TransitService transitService = getTransitService(environment);
     Trip trip = getSource(environment);
     ZoneId timeZone = transitService.getTimeZone();
-    LocalDate serviceDate = serviceDateArg != null
-      ? ServiceDateUtils.parseString(serviceDateArg)
-      : LocalDate.now(timeZone);
+    LocalDate serviceDate =
+      serviceDateArg != null
+        ? ServiceDateUtils.parseString(serviceDateArg)
+        : LocalDate.now(timeZone);
 
     TripPattern tripPattern = transitService.findPattern(trip, serviceDate);
     if (tripPattern == null) {
@@ -597,8 +625,12 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
     if (fare == null) {
       return List.of();
     }
-    var decorated = ItineraryFaresDecorator.decorateItineraryWithFare(itinerary, fare);
-    return decorated.listTransitLegs().getFirst().fareOffers();
+    var itineraryOffers = fare
+      .getItineraryProducts()
+      .stream()
+      .map(fp -> FareOffer.of(startTime, fp))
+      .toList();
+    return ListUtils.combine(itineraryOffers, fare.getLegProducts().get(leg));
   }
 
   /**
@@ -660,35 +692,20 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
     return getTransitService(environment).findPattern(environment.getSource());
   }
 
-  private TripPattern getTripPattern(
-    DataFetchingEnvironment environment,
-    @Nullable LocalDate date
-  ) {
-    return date == null
-      ? getTripPattern(environment)
-      : getTransitService(environment).findPattern(environment.getSource(), date);
-  }
-
   private TransitService getTransitService(DataFetchingEnvironment environment) {
-    return environment.<GraphQLRequestContext>getContext().transitService();
+    return environment.<GtfsGraphQLRequestContext>getContext().transitService();
   }
 
   private FareService getFareService(DataFetchingEnvironment environment) {
-    return environment.<GraphQLRequestContext>getContext().fareService();
+    return environment.<GtfsGraphQLRequestContext>getContext().fareService();
+  }
+
+  private TransitAlertService getTransitAlertService(DataFetchingEnvironment environment) {
+    return environment.<GtfsGraphQLRequestContext>getContext().transitAlertService();
   }
 
   private RealtimeVehicleService getRealtimeVehiclesService(DataFetchingEnvironment environment) {
-    return environment.<GraphQLRequestContext>getContext().realTimeVehicleService();
-  }
-
-  private static Optional<LocalDate> getOptionalServiceDateArgument(
-    DataFetchingEnvironment environment
-  ) throws ParseException {
-    var args = new GraphQLTypes.GraphQLTripArrivalStoptimeArgs(environment.getArguments());
-    if (args.getGraphQLServiceDate() != null) {
-      return Optional.of(ServiceDateUtils.parseString(args.getGraphQLServiceDate()));
-    }
-    return Optional.empty();
+    return environment.<GtfsGraphQLRequestContext>getContext().realTimeVehicleService();
   }
 
   private Trip getSource(DataFetchingEnvironment environment) {

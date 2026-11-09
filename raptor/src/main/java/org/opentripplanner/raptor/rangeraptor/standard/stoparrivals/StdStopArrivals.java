@@ -1,15 +1,15 @@
 package org.opentripplanner.raptor.rangeraptor.standard.stoparrivals;
 
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorTransfer;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
-import org.opentripplanner.raptor.api.model.TransitArrival;
+import org.opentripplanner.raptor.api.view.TransitArrival;
 import org.opentripplanner.raptor.rangeraptor.internalapi.SingleCriteriaStopArrivals;
 import org.opentripplanner.raptor.rangeraptor.internalapi.WorkerLifeCycle;
 import org.opentripplanner.raptor.rangeraptor.standard.internalapi.BestNumberOfTransfers;
 import org.opentripplanner.raptor.rangeraptor.standard.internalapi.DestinationArrivalListener;
 import org.opentripplanner.raptor.rangeraptor.support.IntArraySingleCriteriaArrivals;
 import org.opentripplanner.raptor.rangeraptor.transit.EgressPaths;
+import org.opentripplanner.raptor.spi.RaptorTransfer;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 
 /**
  * @param <T> The TripSchedule type defined by the user of the raptor API.
@@ -36,17 +36,15 @@ public final class StdStopArrivals<T extends RaptorTripSchedule> implements Best
   ) {
     for (int i = 1; i < arrivals.length; i++) {
       final int round = i;
-      egressPaths
-        .byStop()
-        .forEachEntry((stop, list) -> {
-          arrivals[round][stop] = new EgressStopArrivalState<>(
-            stop,
-            round,
-            list,
-            destinationArrivalListener
-          );
-          return true;
-        });
+      egressPaths.byStop().forEachEntry((stop, list) -> {
+        arrivals[round][stop] = new EgressStopArrivalState<>(
+          stop,
+          round,
+          list,
+          destinationArrivalListener
+        );
+        return true;
+      });
     }
   }
 
@@ -100,10 +98,10 @@ public final class StdStopArrivals<T extends RaptorTripSchedule> implements Best
     state.transferToStop(fromStop, arrivalTime, transfer);
   }
 
-  void transitToStop(int stop, int time, int boardStop, int boardTime, T trip, boolean bestTime) {
+  void transitToStop(int stop, int time, int boardStopPosition, T trip, boolean bestTime) {
     var state = getOrCreateStopIndex(round, stop);
 
-    state.arriveByTransit(time, boardStop, boardTime, trip);
+    state.arriveByTransit(time, boardStopPosition, trip);
 
     if (bestTime) {
       state.setBestTimeTransit(time);

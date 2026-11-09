@@ -5,7 +5,6 @@ import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import org.opentripplanner.street.geometry.WgsCoordinate;
-import org.opentripplanner.transit.model.basic.WgsBoundingBox;
 import org.opentripplanner.utils.tostring.ToStringBuilder;
 
 /**

@@ -3,8 +3,9 @@ package org.opentripplanner.raptor._data.stoparrival;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.opentripplanner.raptor._data.stoparrival.TestArrivals.access;
 import static org.opentripplanner.raptor._data.stoparrival.TestArrivals.bus;
-import static org.opentripplanner.raptor.api.model.RaptorCostConverter.toRaptorCost;
+import static org.opentripplanner.raptor._data.stoparrival.TestArrivals.busReverseSearch;
 import static org.opentripplanner.raptor.api.model.RaptorValueType.C1;
+import static org.opentripplanner.raptor.spi.RaptorCostConverter.toRaptorCost;
 import static org.opentripplanner.utils.time.DurationUtils.durationInSeconds;
 import static org.opentripplanner.utils.time.TimeUtils.time;
 
@@ -16,11 +17,11 @@ import org.opentripplanner.raptor._data.transit.TestTransfer;
 import org.opentripplanner.raptor._data.transit.TestTripPattern;
 import org.opentripplanner.raptor._data.transit.TestTripSchedule;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorConstants;
-import org.opentripplanner.raptor.api.model.RaptorTransfer;
 import org.opentripplanner.raptor.api.view.ArrivalView;
 import org.opentripplanner.raptor.rangeraptor.path.DestinationArrival;
+import org.opentripplanner.raptor.spi.RaptorConstants;
 import org.opentripplanner.raptor.spi.RaptorSlackProvider;
+import org.opentripplanner.raptor.spi.RaptorTransfer;
 import org.opentripplanner.raptor.spi.TestSlackProvider;
 import org.opentripplanner.utils.time.TimeUtils;
 
@@ -47,8 +48,6 @@ import org.opentripplanner.utils.time.TimeUtils;
 public class AccessAndEgressWithOpeningHoursPathTestCase implements RaptorTestConstants {
 
   private static final int ZERO = 0;
-  // The transit reluctance is ignored, any value should work
-  private static final int TRANSIT_RELUCTANCE_INDEX = -1;
   public static final double WAIT_RELUCTANCE = 0.8;
   public static final int BOARD_C1_SEC = 60;
   public static final int TRANSFER_C1_SEC = 120;
@@ -339,7 +338,7 @@ public class AccessAndEgressWithOpeningHoursPathTestCase implements RaptorTestCo
       prevArrival = access(egressPath.stop(), arrivalTime, egressPath);
 
       cost = costL1ReverseIncWait(prevArrival.arrivalTime());
-      prevArrival = bus(2, STOP_A, L1_STOP_ARR_TIME_REV, cost, 0, TRIP_A, prevArrival);
+      prevArrival = busReverseSearch(2, STOP_A, L1_STOP_ARR_TIME_REV, cost, 0, TRIP_A, prevArrival);
     } else {
       arrivalTime = L1_END + ALIGHT_SLACK + TX2_DURATION + TRANSFER_SLACK;
       arrivalTime = egressPath.earliestDepartureTime(arrivalTime);
@@ -347,7 +346,7 @@ public class AccessAndEgressWithOpeningHoursPathTestCase implements RaptorTestCo
       arrivalTime = prevArrival.arrivalTime() - TX2_DURATION;
       prevArrival = new Transfer(1, arrivalTime, TX2_TRANSFER_REV, prevArrival);
       cost = costL1ReverseIncWait(prevArrival.arrivalTime());
-      prevArrival = bus(2, STOP_B, L1_STOP_ARR_TIME_REV, cost, 0, TRIP_B, prevArrival);
+      prevArrival = busReverseSearch(2, STOP_B, L1_STOP_ARR_TIME_REV, cost, 0, TRIP_B, prevArrival);
       arrivalTime = prevArrival.arrivalTime() - TX1_DURATION;
       prevArrival = new Transfer(2, arrivalTime, TX1_TRANSFER_REV, prevArrival);
     }
@@ -376,7 +375,7 @@ public class AccessAndEgressWithOpeningHoursPathTestCase implements RaptorTestCo
   }
 
   private static int costL1ReverseIncWait(int prevArrivalTime) {
-    int waitTime = (prevArrivalTime - L1_END) + BOARD_SLACK;
+    int waitTime = prevArrivalTime - L1_END + BOARD_SLACK;
     return toRaptorCost(waitTime * WAIT_RELUCTANCE) + L1_C1_EX_WAIT;
   }
 }

@@ -2,14 +2,14 @@ package org.opentripplanner.raptor.rangeraptor.standard.stoparrivals.view;
 
 import java.util.function.ToIntFunction;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorConstants;
-import org.opentripplanner.raptor.api.model.RaptorTransfer;
-import org.opentripplanner.raptor.api.model.RaptorTripPattern;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
 import org.opentripplanner.raptor.api.view.ArrivalView;
 import org.opentripplanner.raptor.rangeraptor.standard.stoparrivals.StdStopArrivals;
 import org.opentripplanner.raptor.rangeraptor.standard.stoparrivals.StopArrivalState;
 import org.opentripplanner.raptor.rangeraptor.transit.TransitCalculator;
+import org.opentripplanner.raptor.spi.RaptorConstants;
+import org.opentripplanner.raptor.spi.RaptorTransfer;
+import org.opentripplanner.raptor.spi.RaptorTripPattern;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 
 /**
  * Used to create a view to the internal StdRangeRaptor model and to navigate between stop arrivals.
@@ -82,12 +82,11 @@ public class StopsCursor<T extends RaptorTripSchedule> {
     int round,
     int alightStop,
     int alightTime,
-    T trip,
-    int boardStop,
-    int boardTime
+    int boardStopPosition,
+    T trip
   ) {
     StopArrivalState<T> arrival = StopArrivalState.create();
-    arrival.arriveByTransit(alightTime, boardStop, boardTime, trip);
+    arrival.arriveByTransit(alightTime, boardStopPosition, trip);
     return new Transit<>(round, alightStop, arrival, this);
   }
 
@@ -97,7 +96,7 @@ public class StopsCursor<T extends RaptorTripSchedule> {
    */
   public ArrivalView<T> access(int round, int stop, RaptorAccessEgress access) {
     var arrival = arrivals.get(round, stop);
-    int time = access.stopReachedOnBoard() ? arrival.onBoardArrivalTime() : arrival.time();
+    int time = access.arrivedOnBoard() ? arrival.onBoardArrivalTime() : arrival.time();
     return new Access<>(round, time, access);
   }
 

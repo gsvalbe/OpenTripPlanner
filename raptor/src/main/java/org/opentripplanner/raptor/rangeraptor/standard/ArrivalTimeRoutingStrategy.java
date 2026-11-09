@@ -3,14 +3,14 @@ package org.opentripplanner.raptor.rangeraptor.standard;
 import static org.opentripplanner.raptor.spi.RaptorTripScheduleSearch.UNBOUNDED_TRIP_INDEX;
 
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
-import org.opentripplanner.raptor.api.model.TransitArrival;
+import org.opentripplanner.raptor.api.view.TransitArrival;
 import org.opentripplanner.raptor.rangeraptor.internalapi.RoutingStrategy;
 import org.opentripplanner.raptor.rangeraptor.support.TimeBasedBoardingSupport;
 import org.opentripplanner.raptor.rangeraptor.transit.TransitCalculator;
 import org.opentripplanner.raptor.spi.RaptorBoardOrAlightEvent;
 import org.opentripplanner.raptor.spi.RaptorConstrainedBoardingSearch;
 import org.opentripplanner.raptor.spi.RaptorRoute;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,8 +26,8 @@ import org.slf4j.LoggerFactory;
  *
  * @param <T> The TripSchedule type defined by the user of the raptor API.
  */
-public final class ArrivalTimeRoutingStrategy<T extends RaptorTripSchedule>
-  implements RoutingStrategy<T> {
+public final class ArrivalTimeRoutingStrategy<T extends RaptorTripSchedule> implements
+  RoutingStrategy<T> {
 
   private static final Logger LOG = LoggerFactory.getLogger(ArrivalTimeRoutingStrategy.class);
 
@@ -40,7 +40,7 @@ public final class ArrivalTimeRoutingStrategy<T extends RaptorTripSchedule>
   private int logCount = 0;
   private int onTripIndex;
   private int onTripBoardTime;
-  private int onTripBoardStop;
+  private int onTripBoardStopPosition;
   private T onTrip;
 
   public ArrivalTimeRoutingStrategy(
@@ -54,7 +54,7 @@ public final class ArrivalTimeRoutingStrategy<T extends RaptorTripSchedule>
   }
 
   @Override
-  public void setAccessToStop(RaptorAccessEgress accessPath, int departureTime) {
+  public void addAccessStopArrival(RaptorAccessEgress accessPath, int departureTime) {
     state.setAccessToStop(accessPath, departureTime);
   }
 
@@ -63,7 +63,7 @@ public final class ArrivalTimeRoutingStrategy<T extends RaptorTripSchedule>
     boardingSupport.prepareForTransitWith(route.timetable());
     this.onTripIndex = UNBOUNDED_TRIP_INDEX;
     this.onTripBoardTime = NOT_SET;
-    this.onTripBoardStop = NOT_SET;
+    this.onTripBoardStopPosition = NOT_SET;
     this.onTrip = null;
   }
 
@@ -72,12 +72,12 @@ public final class ArrivalTimeRoutingStrategy<T extends RaptorTripSchedule>
     if (onTripIndex != UNBOUNDED_TRIP_INDEX) {
       final int stopArrivalTime = calculator.stopArrivalTime(onTrip, stopPos, alightSlack);
 
-      // TODO: Make sure that the TimeTables can not have negative trip times, then
+      // TODO: Make sure that the TimeTables cannot have negative trip times, then
       //       this check can be removed.
       if (calculator.isBefore(stopArrivalTime, onTripBoardTime)) {
         logInvalidAlightTime(stopPos, stopArrivalTime);
       } else {
-        state.transitToStop(stopIndex, stopArrivalTime, onTripBoardStop, onTripBoardTime, onTrip);
+        state.transitToStop(stopIndex, stopArrivalTime, onTripBoardStopPosition, onTrip);
       }
     }
   }
@@ -92,14 +92,14 @@ public final class ArrivalTimeRoutingStrategy<T extends RaptorTripSchedule>
   @Override
   public void boardWithRegularTransfer(int stopIndex, int stopPos, int boardSlack) {
     int prevArrivalTime = prevArrivalTime(stopIndex);
-    var boarding = boardingSupport.searchRegularTransfer(
+    var boarding = boardingSupport.searchForRegularBoarding(
       prevArrivalTime,
       stopPos,
       boardSlack,
       onTripIndex
     );
     if (!boarding.empty()) {
-      board(stopIndex, boarding);
+      board(boarding);
     }
   }
 
@@ -110,7 +110,7 @@ public final class ArrivalTimeRoutingStrategy<T extends RaptorTripSchedule>
     int boardSlack,
     RaptorConstrainedBoardingSearch<T> txSearch
   ) {
-    var boarding = boardingSupport.searchConstrainedTransfer(
+    var boarding = boardingSupport.searchForConstrainedBoarding(
       previousTransitArrival(stopIndex),
       prevArrivalTime(stopIndex),
       boardSlack,
@@ -119,15 +119,15 @@ public final class ArrivalTimeRoutingStrategy<T extends RaptorTripSchedule>
     if (boarding.empty()) {
       boardWithRegularTransfer(stopIndex, stopPos, boardSlack);
     } else if (!boarding.transferConstraint().isNotAllowed()) {
-      board(stopIndex, boarding);
+      board(boarding);
     }
   }
 
-  private void board(int stopIndex, RaptorBoardOrAlightEvent<T> boarding) {
-    onTripIndex = boarding.tripIndex();
+  private void board(RaptorBoardOrAlightEvent<T> boarding) {
+    onTripIndex = boarding.tripScheduleIndex();
     onTrip = boarding.trip();
     onTripBoardTime = boarding.time();
-    onTripBoardStop = stopIndex;
+    onTripBoardStopPosition = boarding.stopPositionInPattern();
   }
 
   private int prevArrivalTime(int stopIndex) {
@@ -143,7 +143,7 @@ public final class ArrivalTimeRoutingStrategy<T extends RaptorTripSchedule>
       ++logCount;
       LOG.error(
         "Traveling back in time is not allowed. Board stop pos: {}, alight stop pos: {}, stop arrival time: {}, trip: {}.",
-        onTrip.findDepartureStopPosition(onTripBoardTime, onTripBoardStop),
+        onTripBoardStopPosition,
         stopPos,
         stopArrivalTime,
         onTrip

@@ -6,7 +6,7 @@ import jakarta.inject.Singleton;
 import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
 import org.opentripplanner.ext.generalpattern.internal.build.GeneralPatternGraphBuilder;
 import org.opentripplanner.standalone.config.BuildConfig;
-import org.opentripplanner.transit.service.TimetableRepository;
+import org.opentripplanner.transit.service.TransitRepository;
 
 @Module
 public class GeneralPatternGraphBuilderModule {
@@ -15,9 +15,9 @@ public class GeneralPatternGraphBuilderModule {
   @Singleton
   static GeneralPatternGraphBuilder provideGeneralPatternGraphBuilder(
     BuildConfig config,
-    TimetableRepository timetableRepository,
+    TransitRepository transitRepository,
     GeneralPatternRepository repository
   ) {
-    return new GeneralPatternGraphBuilder(config.generalPatterns, timetableRepository, repository);
+    return new GeneralPatternGraphBuilder(config.generalPatterns, transitRepository, repository);
   }
 }

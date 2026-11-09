@@ -1,15 +1,16 @@
 package org.opentripplanner.raptor.rangeraptor.transit;
 
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
-import org.opentripplanner.raptor.api.model.RaptorTripPattern;
-import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
+import org.opentripplanner.raptor.spi.RaptorTripPattern;
+import org.opentripplanner.raptor.spi.RaptorTripSchedule;
 
 /**
  * Used to calculate times in a forward trip search.
  */
 public class ForwardTransitCalculator<T extends RaptorTripSchedule>
   extends ForwardTimeCalculator
-  implements TransitCalculator<T> {
+  implements TransitCalculator<T>
+{
 
   public ForwardTransitCalculator() {}
 

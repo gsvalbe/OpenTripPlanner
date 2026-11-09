@@ -7,9 +7,13 @@ import java.util.Comparator;
 import java.util.List;
 import javax.annotation.Nullable;
 import org.opentripplanner.core.model.id.FeedScopedId;
+import org.opentripplanner.core.model.time.LocalDateRange;
+import org.opentripplanner.core.model.time.TimePeriod;
 import org.opentripplanner.model.TripTimeOnDate;
 import org.opentripplanner.transit.api.model.FilterValues;
 import org.opentripplanner.transit.model.basic.TransitMode;
+import org.opentripplanner.transit.model.filter.selector.FilterRequest;
+import org.opentripplanner.transit.model.filter.transit.TripTimeOnDateSelectRequest;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.service.ArrivalDeparture;
 
@@ -17,11 +21,17 @@ public class TripTimeOnDateRequestBuilder {
 
   private static final String INCLUDE_AGENCIES = "includeAgencies";
   private static final String INCLUDE_ROUTES = "includeRoutes";
+  private static final String INCLUDE_CALL_TIME_PERIODS = "includeCallTimePeriods";
   private static final String EXCLUDE_AGENCIES = "excludeAgencies";
   private static final String INCLUDE_MODES = "includeModes";
   private static final String EXCLUDE_ROUTES = "excludeRoutes";
   private static final String EXCLUDE_MODES = "excludeModes";
   private final Collection<StopLocation> stopLocations;
+  private CancellationPolicy cancellationPolicy = CancellationPolicy.NO_CANCELLATIONS;
+  private FilterValues<TimePeriod> includeCallTimePeriods = FilterValues.ofNullIsEverything(
+    INCLUDE_CALL_TIME_PERIODS,
+    null
+  );
   private FilterValues<FeedScopedId> includeAgencies = FilterValues.ofNullIsEverything(
     INCLUDE_AGENCIES,
     null
@@ -46,18 +56,53 @@ public class TripTimeOnDateRequestBuilder {
     EXCLUDE_MODES,
     List.of()
   );
+  private List<FilterRequest<TripTimeOnDateSelectRequest>> transitFilters = List.of();
   private Duration timeWindow = Duration.ofHours(2);
   private ArrivalDeparture arrivalDeparture = ArrivalDeparture.BOTH;
   private int numberOfDepartures = 10;
   private Instant time;
+  private List<LocalDateRange> serviceDateRanges = List.of();
   private Comparator<TripTimeOnDate> sortOrder = TripTimeOnDate.compareByDeparture();
 
   TripTimeOnDateRequestBuilder(Collection<StopLocation> timesAtStops) {
     this.stopLocations = timesAtStops;
   }
 
+  public TripTimeOnDateRequestBuilder withCancellationPolicy(
+    CancellationPolicy cancellationPolicy
+  ) {
+    this.cancellationPolicy = cancellationPolicy;
+    return this;
+  }
+
   public TripTimeOnDateRequestBuilder withTime(Instant time) {
     this.time = time;
+    return this;
+  }
+
+  /**
+   * Limit the search by the trip times' service date instead of a time window. When set to a
+   * non-empty list, {@link #withTime(Instant)} and {@link #withTimeWindow(Duration)} are ignored.
+   */
+  public TripTimeOnDateRequestBuilder withServiceDateRanges(
+    List<LocalDateRange> serviceDateRanges
+  ) {
+    this.serviceDateRanges = serviceDateRanges;
+    return this;
+  }
+
+  /**
+   * Only include calls where the vehicle is scheduled to visit the stop during one of the given
+   * periods. The visit at a stop lasts from the scheduled arrival at the stop until the scheduled
+   * departure from it.
+   */
+  public TripTimeOnDateRequestBuilder withIncludeCallTimePeriods(
+    @Nullable Collection<TimePeriod> callTimePeriods
+  ) {
+    this.includeCallTimePeriods = FilterValues.ofNullIsEverything(
+      INCLUDE_CALL_TIME_PERIODS,
+      callTimePeriods
+    );
     return this;
   }
 
@@ -113,20 +158,31 @@ public class TripTimeOnDateRequestBuilder {
     return this;
   }
 
+  public TripTimeOnDateRequestBuilder withTransitFilters(
+    List<FilterRequest<TripTimeOnDateSelectRequest>> transitFilters
+  ) {
+    this.transitFilters = transitFilters;
+    return this;
+  }
+
   public TripTimeOnDateRequest build() {
     return new TripTimeOnDateRequest(
       stopLocations,
       time,
+      serviceDateRanges,
       timeWindow,
       arrivalDeparture,
       numberOfDepartures,
       sortOrder,
+      cancellationPolicy,
+      includeCallTimePeriods,
       includeAgencies,
       includeRoutes,
       excludeAgencies,
       excludeRoutes,
       includeModes,
-      excludeModes
+      excludeModes,
+      transitFilters
     );
   }
 }

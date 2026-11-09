@@ -18,7 +18,6 @@ import org.opentripplanner.raptor._data.transit.TestTransitData;
 import org.opentripplanner.raptor._data.transit.TestTripSchedule;
 import org.opentripplanner.raptor.api.request.RaptorRequestBuilder;
 import org.opentripplanner.raptor.configure.RaptorTestFactory;
-import org.opentripplanner.raptor.moduletests.support.ModuleTestDebugLogging;
 import org.opentripplanner.raptor.moduletests.support.RaptorModuleTestCase;
 import org.opentripplanner.raptor.spi.TestSlackProvider;
 
@@ -58,9 +57,13 @@ public class C01_TransferBoardAndAlightSlackTest implements RaptorTestConstants 
         // earliest-departure-time: 0:03:00 + 10s + 1m + 30s = 0:04:40
         route(pattern("R2", STOP_C, STOP_D)).withTimetable(
           // Missed by 1 second
-          schedule().departures("00:04:40 00:05:10").arrDepOffset(D10_s),
+          schedule()
+            .departures("00:04:40 00:05:10")
+            .arrDepOffset(D10_s),
           // Exact match
-          schedule().departures("00:04:41 00:05:11").arrDepOffset(D10_s)
+          schedule()
+            .departures("00:04:41 00:05:11")
+            .arrDepOffset(D10_s)
         )
       )
       // Ends 30s after last stop arrival: 10s alight-slack + 20s walk
@@ -71,8 +74,6 @@ public class C01_TransferBoardAndAlightSlackTest implements RaptorTestConstants 
       .earliestDepartureTime(T00_00)
       .latestArrivalTime(T00_30)
       .searchWindowInSeconds(D3_m);
-
-    ModuleTestDebugLogging.setupDebugLogging(data);
   }
 
   static List<RaptorModuleTestCase> testCases() {
