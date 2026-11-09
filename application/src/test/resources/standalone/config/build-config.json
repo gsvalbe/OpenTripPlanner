@@ -84,7 +84,6 @@
     "excludeRegions": ["Rīga", "Vilnius", "Tallinna linn", "Kaunas"],
     "excludeModes": ["FERRY"],
     "stationFallbackRadius": 400,
-    "corridorMinOverlap": 0.85,
     "railSkipRadius": 250
   },
   "transferParametersForMode": {

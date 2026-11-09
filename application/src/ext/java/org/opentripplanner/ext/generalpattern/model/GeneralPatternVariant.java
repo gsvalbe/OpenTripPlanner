@@ -8,33 +8,24 @@ import org.opentripplanner.utils.tostring.ToStringBuilder;
 
 /**
  * One station-level stop sequence inside a general pattern. Several {@link TripPattern}s collapse
- * into a variant when they differ only by platform or pickup/drop-off rules.
+ * into a variant when they differ only by platform or pickup/drop-off rules. A variant passes,
+ * without stopping, every stop between its first and last stop that it does not serve.
  */
 public final class GeneralPatternVariant implements Serializable {
 
   private final List<TripPattern> patterns;
   private final BitSet servedStops;
-  private final BitSet passedStops;
   private final int scheduledTrips;
 
-  public GeneralPatternVariant(
-    List<TripPattern> patterns,
-    BitSet servedStops,
-    BitSet passedStops,
-    int scheduledTrips
-  ) {
+  public GeneralPatternVariant(List<TripPattern> patterns, BitSet servedStops, int scheduledTrips) {
     if (patterns.isEmpty()) {
       throw new IllegalArgumentException("A variant needs at least one pattern");
     }
     if (servedStops.cardinality() < 2) {
       throw new IllegalArgumentException("A variant must serve at least two stops");
     }
-    if (servedStops.intersects(passedStops)) {
-      throw new IllegalArgumentException("A stop cannot be both served and passed");
-    }
     this.patterns = List.copyOf(patterns);
     this.servedStops = (BitSet) servedStops.clone();
-    this.passedStops = (BitSet) passedStops.clone();
     this.scheduledTrips = scheduledTrips;
   }
 
@@ -59,7 +50,7 @@ public final class GeneralPatternVariant implements Serializable {
 
   /** The vehicle passes the stop without stopping. */
   public boolean passesStop(int stopIndex) {
-    return passedStops.get(stopIndex);
+    return reachesStop(stopIndex) && !servesStop(stopIndex);
   }
 
   /** The stop lies between the variant's first and last stop. */
@@ -79,7 +70,6 @@ public final class GeneralPatternVariant implements Serializable {
       .addNum("first", firstStopIndex())
       .addNum("last", lastStopIndex())
       .addNum("served", servedStops.cardinality())
-      .addNum("passed", passedStops.cardinality(), 0)
       .addNum("trips", scheduledTrips)
       .toString();
   }

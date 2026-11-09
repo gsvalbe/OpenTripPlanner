@@ -100,21 +100,6 @@ final class ProjectedLine {
     return new Projection(bestDistance, bestMeasure);
   }
 
-  /** The point at the given measure, as {@code [x, y]}. */
-  double[] pointAt(double measure) {
-    if (xs.length == 1 || measure <= 0) {
-      return new double[] { xs[0], ys[0] };
-    }
-    for (int i = 0; i < xs.length - 1; i++) {
-      if (measures[i + 1] >= measure) {
-        double seg = measures[i + 1] - measures[i];
-        double t = seg == 0 ? 0 : (measure - measures[i]) / seg;
-        return new double[] { xs[i] + t * (xs[i + 1] - xs[i]), ys[i] + t * (ys[i + 1] - ys[i]) };
-      }
-    }
-    return new double[] { xs[xs.length - 1], ys[ys.length - 1] };
-  }
-
   /**
    * @param distance distance in meters from the point to the line
    * @param measure distance in meters along the line to the nearest point

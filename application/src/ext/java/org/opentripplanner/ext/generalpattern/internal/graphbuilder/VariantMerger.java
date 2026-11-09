@@ -9,23 +9,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
-import org.opentripplanner.ext.generalpattern.internal.graphbuilder.Group.Unserved;
 import org.opentripplanner.ext.generalpattern.parameters.GeneralPatternParameters;
 
 /**
  * Groups the variants of one route into general patterns.
  * <p>
- * A variant joins a group when they share enough stations and their combined stop order has no
- * cycle (which keeps the two directions apart). When the combined order is ambiguous, tied stops
- * are ordered by their position along the shape. Such a merge is kept only if the variants run
- * along the same corridor; otherwise they are branches or different roads.
+ * Variants are merged only when they differ by shortened trips, extended trips and skipped
+ * stops. A variant joins a group when they share enough stations, their combined stop order has
+ * no cycle (which keeps the two directions apart), and every member passes, within the skip
+ * radius, each stop of the combined order that lies inside its span but that it does not serve.
+ * A variant that would have to leave its road to serve such a stop, such as a diversion through a
+ * village or a branch, stays in a general pattern of its own.
  */
 final class VariantMerger {
 
-  /** Distance between sample points when testing corridor overlap, in meters. */
-  private static final double SAMPLE_STEP = 500;
-
-  /** Slack around the measure window used when classifying an unserved stop, in meters. */
+  /** Slack around the measure window used when testing an unserved stop, in meters. */
   private static final double WINDOW_SLACK = 50;
 
   private final GeneralPatternParameters parameters;
@@ -114,29 +112,12 @@ final class VariantMerger {
     if (order == null) {
       return null;
     }
-    var unserved = classify(members, order.nodes());
-    if (order.ties() > 0 && hasDetour(unserved)) {
-      Variant reference = group
-        .members()
-        .stream()
-        .max(
-          Comparator.comparingInt((Variant m) -> m.sharedNodes(variant)).thenComparingDouble(m ->
-            m.line().length()
-          )
-        )
-        .orElseThrow();
-      if (reference.sharedNodes(variant) < parameters.minSharedStations()) {
-        return null;
-      }
-      double overlap = Math.min(
-        corridorOverlap(variant, reference, order.nodes()),
-        corridorOverlap(reference, variant, order.nodes())
-      );
-      if (overlap < parameters.corridorMinOverlap()) {
+    for (Variant m : members) {
+      if (!passesAllUnserved(m, order)) {
         return null;
       }
     }
-    return new Group(members, order.nodes(), unserved);
+    return new Group(members, order);
   }
 
   /**
@@ -144,7 +125,7 @@ final class VariantMerger {
    * position along the longest member's shape. Returns {@code null} if the graph has a cycle.
    */
   @Nullable
-  Order mergeOrder(List<Variant> members) {
+  List<Node> mergeOrder(List<Variant> members) {
     Map<Node, Set<Node>> successors = new LinkedHashMap<>();
     Map<Node, Integer> inDegree = new HashMap<>();
     Set<Node> nodes = new LinkedHashSet<>();
@@ -171,10 +152,8 @@ final class VariantMerger {
       }
     }
     List<Node> out = new ArrayList<>(nodes.size());
-    int ties = 0;
     while (!ready.isEmpty()) {
       if (ready.size() > 1) {
-        ties++;
         for (Node n : ready) {
           measures.computeIfAbsent(n, k -> {
             double[] xy = xy(k);
@@ -192,96 +171,48 @@ final class VariantMerger {
         }
       }
     }
-    return out.size() == nodes.size() ? new Order(out, ties) : null;
+    return out.size() == nodes.size() ? out : null;
   }
 
   /**
-   * For every member and every stop inside its span that it does not serve: does the vehicle pass
-   * the stop, or would serving it need a detour?
+   * Whether the variant passes, within the skip radius, every stop between its first and last
+   * stop in the merged order that it does not serve. Each such stop is tested against the part of
+   * the variant's shape between the served stops around it.
    */
-  Map<Variant, Map<Node, Unserved>> classify(List<Variant> members, List<Node> order) {
-    Map<Node, Integer> pos = positions(order);
-    Map<Variant, Map<Node, Unserved>> result = new HashMap<>();
-    for (Variant m : members) {
-      int lo = pos.get(m.first());
-      int hi = pos.get(m.last());
-      Map<Node, Double> servedMeasures = new HashMap<>();
-      double last = 0;
-      for (Node n : m.sequence()) {
-        double[] xy = xy(n);
-        double measure = m.line().project(xy[0], xy[1], last, Double.POSITIVE_INFINITY).measure();
-        servedMeasures.put(n, measure);
-        last = measure;
-      }
-      Map<Node, Unserved> unserved = new HashMap<>();
-      Node previous = m.first();
-      for (int k = lo; k <= hi; k++) {
-        Node n = order.get(k);
-        if (m.contains(n)) {
-          previous = n;
-          continue;
-        }
-        Node next = nextServed(m, order, k);
-        double[] xy = xy(n);
-        double distance = m
-          .line()
-          .project(
-            xy[0],
-            xy[1],
-            servedMeasures.get(previous) - WINDOW_SLACK,
-            servedMeasures.get(next) + WINDOW_SLACK
-          )
-          .distance();
-        unserved.put(n, distance <= skipRadius ? Unserved.PASS : Unserved.DETOUR);
-      }
-      result.put(m, unserved);
+  boolean passesAllUnserved(Variant m, List<Node> order) {
+    int lo = order.indexOf(m.first());
+    int hi = order.indexOf(m.last());
+    Map<Node, Double> servedMeasures = new HashMap<>();
+    double last = 0;
+    for (Node n : m.sequence()) {
+      double[] xy = xy(n);
+      double measure = m.line().project(xy[0], xy[1], last, Double.POSITIVE_INFINITY).measure();
+      servedMeasures.put(n, measure);
+      last = measure;
     }
-    return result;
-  }
-
-  /**
-   * Share of {@code a}'s shape within {@code corridorBuffer} of {@code b}'s shape, sampled along
-   * the part of {@code a} that lies inside {@code b}'s span in the merged order. A branch tail that
-   * leaves {@code b}'s corridor therefore counts against the merge; a short turn does not.
-   */
-  double corridorOverlap(Variant a, Variant b, List<Node> order) {
-    Map<Node, Integer> pos = positions(order);
-    int lo = pos.get(b.first());
-    int hi = pos.get(b.last());
-    double minMeasure = Double.POSITIVE_INFINITY;
-    double maxMeasure = Double.NEGATIVE_INFINITY;
-    int inWindow = 0;
-    for (Node n : a.sequence()) {
-      int p = pos.get(n);
-      if (p < lo || p > hi) {
+    Node previous = m.first();
+    for (int k = lo; k <= hi; k++) {
+      Node n = order.get(k);
+      if (m.contains(n)) {
+        previous = n;
         continue;
       }
-      inWindow++;
+      Node next = nextServed(m, order, k);
       double[] xy = xy(n);
-      double measure = a.line().project(xy[0], xy[1]).measure();
-      minMeasure = Math.min(minMeasure, measure);
-      maxMeasure = Math.max(maxMeasure, measure);
-    }
-    if (inWindow < 2 || maxMeasure - minMeasure < SAMPLE_STEP) {
-      return 1.0;
-    }
-    int samples = 0;
-    int close = 0;
-    for (double m = minMeasure; m <= maxMeasure; m += SAMPLE_STEP) {
-      double[] p = a.line().pointAt(m);
-      samples++;
-      if (b.line().project(p[0], p[1]).distance() <= parameters.corridorBuffer()) {
-        close++;
+      double distance = m
+        .line()
+        .project(
+          xy[0],
+          xy[1],
+          servedMeasures.get(previous) - WINDOW_SLACK,
+          servedMeasures.get(next) + WINDOW_SLACK
+        )
+        .distance();
+      if (distance > skipRadius) {
+        return false;
       }
     }
-    return (double) close / samples;
-  }
-
-  private static boolean hasDetour(Map<Variant, Map<Node, Unserved>> unserved) {
-    return unserved
-      .values()
-      .stream()
-      .anyMatch(m -> m.containsValue(Unserved.DETOUR));
+    return true;
   }
 
   private static Node nextServed(Variant m, List<Node> order, int from) {
@@ -293,21 +224,10 @@ final class VariantMerger {
     throw new IllegalStateException("A node inside a variant's span has a served node after it");
   }
 
-  private static Map<Node, Integer> positions(List<Node> order) {
-    Map<Node, Integer> pos = new HashMap<>();
-    for (int i = 0; i < order.size(); i++) {
-      pos.put(order.get(i), i);
-    }
-    return pos;
-  }
-
   private double[] xy(Node n) {
     return xyCache.computeIfAbsent(n, k -> new double[] {
       ProjectedLine.projectX(k.key().coordinate().longitude(), lonScale),
       ProjectedLine.projectY(k.key().coordinate().latitude()),
     });
   }
-
-  /** A merged stop order and the number of times the topological sort had to break a tie. */
-  record Order(List<Node> nodes, int ties) {}
 }

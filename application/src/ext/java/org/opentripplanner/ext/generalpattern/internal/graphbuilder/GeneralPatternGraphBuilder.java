@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.opentripplanner.core.model.id.FeedScopedId;
@@ -16,6 +17,7 @@ import org.opentripplanner.ext.generalpattern.parameters.GeneralPatternParameter
 import org.opentripplanner.graph_builder.model.GraphBuilderModule;
 import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.network.Route;
+import org.opentripplanner.transit.model.network.StopSequenceNamer;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.service.TransitRepository;
@@ -93,10 +95,9 @@ public class GeneralPatternGraphBuilder implements GraphBuilderModule {
       .filter(gp -> gp.variants().size() > 1)
       .forEach(gp ->
         LOG.info(
-          "General pattern {} ({} - {}): {} variants, {} stops",
+          "General pattern {} ({}): {} variants, {} stops",
           gp.id(),
-          gp.firstStop().stop().getName(),
-          gp.lastStop().stop().getName(),
+          gp.name(Locale.ROOT),
           gp.variants().size(),
           gp.stops().size()
         )
@@ -132,6 +133,27 @@ public class GeneralPatternGraphBuilder implements GraphBuilderModule {
     List<GeneralPattern> result = new ArrayList<>(groups.size());
     for (Group group : groups) {
       result.add(GeneralPatternMapper.map(id(route, group, idCount), route, group));
+    }
+    return withUniqueNames(result);
+  }
+
+  /** Name the general patterns of one route so that no two get the same name. */
+  private static List<GeneralPattern> withUniqueNames(List<GeneralPattern> generalPatterns) {
+    List<List<String>> sequences = generalPatterns
+      .stream()
+      .map(gp ->
+        gp
+          .stops()
+          .stream()
+          .map(s -> s.name() == null ? s.stop().getId().getId() : s.name().toString())
+          .toList()
+      )
+      .toList();
+    List<StopSequenceNamer.Name> names = StopSequenceNamer.name(sequences);
+    List<GeneralPattern> result = new ArrayList<>(generalPatterns.size());
+    for (int i = 0; i < generalPatterns.size(); i++) {
+      var name = names.get(i);
+      result.add(generalPatterns.get(i).withName(name.stopIndexes(), name.number()));
     }
     return result;
   }

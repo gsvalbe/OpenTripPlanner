@@ -4,10 +4,8 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import org.opentripplanner.core.model.id.FeedScopedId;
-import org.opentripplanner.ext.generalpattern.internal.graphbuilder.Group.Unserved;
 import org.opentripplanner.ext.generalpattern.model.GeneralPattern;
 import org.opentripplanner.ext.generalpattern.model.GeneralPatternPlace;
 import org.opentripplanner.ext.generalpattern.model.GeneralPatternVariant;
@@ -44,25 +42,14 @@ final class GeneralPatternMapper {
 
     List<GeneralPatternVariant> variants = new ArrayList<>(members.size());
     for (Variant m : members) {
-      int first = order.indexOf(m.first());
-      int last = order.indexOf(m.last());
       BitSet served = new BitSet(order.size());
-      BitSet passed = new BitSet(order.size());
-      for (int k = first; k <= last; k++) {
-        Node node = order.get(k);
-        if (m.contains(node)) {
+      for (int k = 0; k < order.size(); k++) {
+        if (m.contains(order.get(k))) {
           served.set(k);
-        } else if (unserved(group, m, node) == Unserved.PASS) {
-          passed.set(k);
         }
       }
-      variants.add(new GeneralPatternVariant(m.patterns(), served, passed, m.trips()));
+      variants.add(new GeneralPatternVariant(m.patterns(), served, m.trips()));
     }
     return GeneralPattern.of(id, route, places, variants);
-  }
-
-  private static Unserved unserved(Group group, Variant variant, Node node) {
-    Map<Node, Unserved> map = group.unserved().getOrDefault(variant, Map.of());
-    return map.getOrDefault(node, Unserved.DETOUR);
   }
 }

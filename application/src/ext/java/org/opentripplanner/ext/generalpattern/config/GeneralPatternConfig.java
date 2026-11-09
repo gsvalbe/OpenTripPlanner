@@ -23,8 +23,9 @@ public class GeneralPatternConfig {
       .description(
         """
         A general pattern merges the trip patterns of a route that differ only by platform,
-        skipped stops, short turns or small detours into one readable stop sequence. They are
-        built only when the `GeneralPatterns` feature is enabled.
+        skipped stops, or trips that start or end at other stops along the line, into one
+        readable stop sequence. Patterns that take another road are not merged. General patterns
+        are built only when the `GeneralPatterns` feature is enabled.
         """
       )
       .asObject();
@@ -66,26 +67,6 @@ public class GeneralPatternConfig {
         .summary("Minimum number of shared stations for a pattern to join a general pattern.")
         .asInt(dft.minSharedStations()),
       c
-        .of("corridorBuffer")
-        .since(V2_9)
-        .summary(
-          "Distance, in meters, used to test whether two variants run along the same corridor."
-        )
-        .asDouble(dft.corridorBuffer()),
-      c
-        .of("corridorMinOverlap")
-        .since(V2_9)
-        .summary(
-          "Share of a variant's shape that must lie within `corridorBuffer` of the other variant."
-        )
-        .description(
-          """
-          Only used when the stop order of the merged variants is ambiguous. A lower value merges
-          more variants; a higher value keeps branches and different roads apart.
-          """
-        )
-        .asDouble(dft.corridorMinOverlap()),
-      c
         .of("skipRadius")
         .since(V2_9)
         .summary(
@@ -94,7 +75,7 @@ public class GeneralPatternConfig {
         .description(
           """
           A stop the variant does not serve, but passes within this distance of, is marked as
-          skipped. A stop further away is a detour that the variant does not take.
+          skipped. If a stop is further away, the variant takes another road and is not merged.
           """
         )
         .asDouble(dft.skipRadius()),

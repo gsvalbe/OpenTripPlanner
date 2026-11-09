@@ -468,6 +468,7 @@ public class GraphQLDataFetchers {
    */
   public interface GraphQLGeneralPattern {
     DataFetcher<String> gtfsId();
+    DataFetcher<String> name();
     DataFetcher<Iterable<TripPattern>> patterns();
     DataFetcher<Route> route();
     DataFetcher<Iterable<GeneralPatternStop>> stops();

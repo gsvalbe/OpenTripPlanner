@@ -63,8 +63,6 @@ Sections follow that describe particular settings in more depth.
 | empiricalDelay                                                                              |       `object`       | Empirical delay configuration.                                                                                                                                 | *Optional* |                                   |  2.9  |
 | [fares](sandbox/Fares.md)                                                                   |       `object`       | Fare configuration.                                                                                                                                            | *Optional* |                                   |  2.0  |
 | [generalPatterns](#generalPatterns)                                                         |       `object`       | Configure how general patterns are built.                                                                                                                      | *Optional* |                                   |  2.9  |
-|    corridorBuffer                                                                           |       `double`       | Distance, in meters, used to test whether two variants run along the same corridor.                                                                            | *Optional* | `1000.0`                          |  2.9  |
-|    [corridorMinOverlap](#generalPatterns_corridorMinOverlap)                                |       `double`       | Share of a variant's shape that must lie within `corridorBuffer` of the other variant.                                                                         | *Optional* | `0.85`                            |  2.9  |
 |    minSharedStations                                                                        |       `integer`      | Minimum number of shared stations for a pattern to join a general pattern.                                                                                     | *Optional* | `2`                               |  2.9  |
 |    railSkipRadius                                                                           |       `double`       | Same as `skipRadius`, used for rail.                                                                                                                           | *Optional* | `250.0`                           |  2.9  |
 |    [skipRadius](#generalPatterns_skipRadius)                                                |       `double`       | Maximum distance, in meters, from a variant's shape for an unserved stop to count as passed.                                                                   | *Optional* | `400.0`                           |  2.9  |
@@ -821,19 +819,9 @@ The ordered OSM tag keys whose values are combined into one id.
 Configure how general patterns are built.
 
 A general pattern merges the trip patterns of a route that differ only by platform,
-skipped stops, short turns or small detours into one readable stop sequence. They are
-built only when the `GeneralPatterns` feature is enabled.
-
-
-<h3 id="generalPatterns_corridorMinOverlap">corridorMinOverlap</h3>
-
-**Since version:** `2.9` ∙ **Type:** `double` ∙ **Cardinality:** `Optional` ∙ **Default value:** `0.85`   
-**Path:** /generalPatterns 
-
-Share of a variant's shape that must lie within `corridorBuffer` of the other variant.
-
-Only used when the stop order of the merged variants is ambiguous. A lower value merges
-more variants; a higher value keeps branches and different roads apart.
+skipped stops, or trips that start or end at other stops along the line, into one
+readable stop sequence. Patterns that take another road are not merged. General patterns
+are built only when the `GeneralPatterns` feature is enabled.
 
 
 <h3 id="generalPatterns_skipRadius">skipRadius</h3>
@@ -844,7 +832,7 @@ more variants; a higher value keeps branches and different roads apart.
 Maximum distance, in meters, from a variant's shape for an unserved stop to count as passed.
 
 A stop the variant does not serve, but passes within this distance of, is marked as
-skipped. A stop further away is a detour that the variant does not take.
+skipped. If a stop is further away, the variant takes another road and is not merged.
 
 
 <h3 id="generalPatterns_excludeAgencies">excludeAgencies</h3>
@@ -1531,7 +1519,6 @@ the centroid.
       "FERRY"
     ],
     "stationFallbackRadius" : 400,
-    "corridorMinOverlap" : 0.85,
     "railSkipRadius" : 250
   },
   "transferParametersForMode" : {

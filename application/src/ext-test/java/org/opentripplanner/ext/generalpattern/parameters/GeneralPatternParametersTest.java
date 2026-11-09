@@ -26,8 +26,6 @@ class GeneralPatternParametersTest {
       modes,
       d.stationFallbackRadius(),
       d.minSharedStations(),
-      d.corridorBuffer(),
-      d.corridorMinOverlap(),
       d.skipRadius(),
       d.railSkipRadius()
     );
@@ -71,32 +69,10 @@ class GeneralPatternParametersTest {
   @Test
   void invalidValuesAreRejected() {
     assertThrows(IllegalArgumentException.class, () ->
-      new GeneralPatternParameters(
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        400,
-        2,
-        1000,
-        1.5,
-        400,
-        250
-      )
+      new GeneralPatternParameters(Set.of(), Set.of(), Set.of(), Set.of(), 400, 0, 400, 250)
     );
     assertThrows(IllegalArgumentException.class, () ->
-      new GeneralPatternParameters(
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        0,
-        2,
-        1000,
-        0.8,
-        400,
-        250
-      )
+      new GeneralPatternParameters(Set.of(), Set.of(), Set.of(), Set.of(), 0, 2, 400, 250)
     );
   }
 }

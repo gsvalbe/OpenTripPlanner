@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -134,17 +135,58 @@ class GeneralPatternGraphBuilderTest {
   }
 
   @Test
-  void detourWithUnambiguousOrderIsMerged() {
+  void diversionStaysSeparate() {
     // X lies about 2 km off the line between B and C
     var x = model.stop("X", LAT + 0.018, LON + 1.5 * STEP).build();
 
     var gps = build(pattern(3, a, b, c), pattern(1, a, b, x, c));
 
-    assertEquals(1, gps.size());
-    var stopX = gps.getFirst().stops().get(2);
-    assertEquals("X", stopX.stop().getName().toString());
-    assertEquals(StopStatus.DETOUR, stopX.status());
-    assertEquals(3, stopX.detourTrips());
+    assertEquals(2, gps.size());
+    assertEquals(List.of("A", "B", "C"), names(gps.get(0)));
+    assertEquals(List.of("A", "B", "X", "C"), names(gps.get(1)));
+  }
+
+  @Test
+  void diversionCombinedWithShortTurnStaysSeparate() {
+    var x = model.stop("X", LAT + 0.018, LON + 1.5 * STEP).build();
+
+    var gps = build(pattern(3, a, b, c, d, e), pattern(1, b, x, c, d));
+
+    assertEquals(2, gps.size());
+  }
+
+  @Test
+  void namesAreFirstAndLastStop() {
+    var gps = build(pattern(3, a, b, c, d, e), pattern(1, a, b, c), pattern(2, e, d, c, b, a));
+
+    assertEquals(
+      List.of("A - E", "E - A"),
+      gps
+        .stream()
+        .map(gp -> gp.name(Locale.ROOT))
+        .toList()
+    );
+  }
+
+  @Test
+  void generalPatternsWithTheSameEndsAreNamedAfterAStopOfTheirOwn() {
+    // X and Y lie about 2 km off the line, on either side of it
+    var x = model.stop("X", LAT + 0.018, LON + 2 * STEP).build();
+    var y = model.stop("Y", LAT - 0.018, LON + 2 * STEP).build();
+
+    var gps = build(
+      pattern(3, a, b, c, d, e),
+      pattern(2, a, b, x, d, e),
+      pattern(1, a, b, y, d, e)
+    );
+
+    assertEquals(
+      List.of("A - C - E", "A - X - E", "A - Y - E"),
+      gps
+        .stream()
+        .map(gp -> gp.name(Locale.ROOT))
+        .toList()
+    );
   }
 
   @Test

@@ -3,11 +3,13 @@ package org.opentripplanner.graph_builder.module;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import jakarta.inject.Inject;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Comparator;
+import java.util.List;
 import org.opentripplanner.graph_builder.model.GraphBuilderModule;
 import org.opentripplanner.transit.model.network.Route;
+import org.opentripplanner.transit.model.network.StopSequenceNamer;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.service.TransitRepository;
@@ -31,38 +33,18 @@ public class TripPatternNamer implements GraphBuilderModule {
   }
 
   /**
-   * Static method that creates unique human-readable names for a collection of TableTripPatterns.
-   * Perhaps this should be in TripPattern, and apply to Frequency patterns as well. TODO: resolve
-   * this question: can a frequency and table pattern have the same stoppattern? If so should they
-   * have the same "unique" name?
+   * Creates human-readable names for the trip patterns that do not have one yet, unique among the
+   * patterns of a route.
    * <p>
-   * The names should be dataset unique, not just route-unique?
+   * A GTFS route name is meant for general customer information, but riders sometimes need to
+   * know where a particular trip actually goes. Each pattern is therefore named after its stops,
+   * see {@link StopSequenceNamer}: first and last stop ({@code "A - B"}), plus a stop near the
+   * middle that only this pattern serves when several patterns have the same ends
+   * ({@code "A - M - B"}). Patterns that cannot be told apart by their stop names get a number.
+   * Names contain stop names only, so they work in every language.
    * <p>
-   * A TripPattern groups all trips visiting a particular pattern of stops on a particular route.
-   * GFTS Route names are intended for very general customer information, but sometimes there is a
-   * need to know where a particular trip actually goes. For example, the New York City N train has
-   * at least four different variants: express (over the Manhattan bridge) and local (via lower
-   * Manhattan and the tunnel), in two directions (to Astoria or to Coney Island). During
-   * construction, a fifth variant sometimes appears: trains use the D line to Coney Island after
-   * 59th St (or from Coney Island to 59th in the opposite direction).
-   * <p>
-   * TripPattern names are machine-generated on a best-effort basis. They are guaranteed to be
-   * unique (among TripPatterns for a single Route) but not stable across graph builds, especially
-   * when different versions of GTFS inputs are used. For instance, if a variant is the only variant
-   * of the N that ends at Coney Island, the name will be "N to Coney Island". But if multiple
-   * variants end at Coney Island (but have different stops elsewhere), that name would not be
-   * chosen. OTP also tries start and intermediate stations ("from Coney Island", or "via
-   * Whitehall", or even combinations ("from Coney Island via Whitehall"). But if there is no way to
-   * create a unique name from start/end/intermediate stops, then the best we can do is to create a
-   * "like [trip id]" name, which at least tells you where in the GTFS you can find a related trip.
-   */
-  // TODO: pass in a transit index that contains a Multimap<Route, TripPattern> and derive all TableTripPatterns
-  // TODO: combine from/to and via in a single name. this could be accomplished by grouping the trips by destination,
-  // then disambiguating in groups of size greater than 1.
-  /*
-   * Another possible approach: for each route, determine the necessity of each field (which
-   * combination will create unique names). from, to, via, express. Then concatenate all necessary
-   * fields. Express should really be determined from number of stops and/or run time of trips.
+   * A route with a single pattern uses the route name, and a name given in the input data (for
+   * example in NeTEx or a GTFS extension) is kept. Names are not stable across graph builds.
    */
   public static void generateUniqueNames(Collection<TripPattern> tableTripPatterns) {
     LOG.info("Generating unique names for stop patterns on each route.");
@@ -81,75 +63,36 @@ public class TripPatternNamer implements GraphBuilderModule {
       if (routeTripPatterns.stream().allMatch(tripPattern -> tripPattern.getName() != null)) {
         continue;
       }
-      String routeName = route.getName();
 
       /* Simplest case: there's only one route variant, so we'll just give it the route's name. */
       if (routeTripPatterns.size() == 1) {
-        routeTripPatterns.iterator().next().initName(routeName);
+        routeTripPatterns.iterator().next().initName(route.getName());
         continue;
       }
 
-      /* Do the patterns within this Route have a unique start, end, or via Stop? */
-      Multimap<StopLocation, TripPattern> starts = ArrayListMultimap.create();
-      Multimap<StopLocation, TripPattern> ends = ArrayListMultimap.create();
-      Multimap<StopLocation, TripPattern> vias = ArrayListMultimap.create();
-
+      List<TripPattern> toName = new ArrayList<>();
       for (TripPattern pattern : routeTripPatterns) {
-        StopLocation start = pattern.firstStop();
-        StopLocation end = pattern.lastStop();
-        starts.put(start, pattern);
-        ends.put(end, pattern);
-        for (StopLocation stop : pattern.getStops()) {
-          vias.put(stop, pattern);
-        }
-      }
-      PATTERN: for (TripPattern pattern : routeTripPatterns) {
         if (pattern.getName() != null) {
           continue;
         }
-
         String patternName = pattern.getTripPatternName();
         if (patternName != null && !patternName.isBlank()) {
           pattern.initName(patternName);
-          continue;
+        } else {
+          toName.add(pattern);
         }
-
-        /* First try to name with destination and origin. */
-        var start = pattern.firstStop();
-        var end = pattern.lastStop();
-        if (ends.get(end).size() == 1 || starts.get(start).size() == 1) {
-          pattern.initName(start.getName() + " - " + end.getName());
-          // only pattern with this last stop
-          continue;
-        }
-
-        /* Check whether (end, start) is unique. */
-        Collection<TripPattern> tripPatterns = starts.get(start);
-        Set<TripPattern> remainingPatterns = new HashSet<>(tripPatterns);
-        // set intersection
-        remainingPatterns.retainAll(ends.get(end));
-        if (remainingPatterns.size() == 1) {
-          pattern.initName(start.getName() + " - " + end.getName());
-          continue;
-        }
-
-        /* Still not unique; try (end, start, via) for each via. */
-        for (var via : pattern.getStops()) {
-          if (via.equals(start) || via.equals(end)) {
-            continue;
-          }
-          Set<TripPattern> intersection = new HashSet<>(remainingPatterns);
-          intersection.retainAll(vias.get(via));
-          if (intersection.size() == 1) {
-            pattern.initName(start.getName() + " - " + via.getName() + " - " + end.getName());
-            continue PATTERN;
-          }
-        }
-
-        pattern.initName(start.getName() + " - " + end.getName());
-        // END foreach PATTERN
       }
-      // END foreach ROUTE
+      toName.sort(Comparator.comparing(TripPattern::getId));
+
+      List<List<String>> sequences = toName
+        .stream()
+        .map(p -> p.getStops().stream().map(TripPatternNamer::stopName).toList())
+        .toList();
+      List<StopSequenceNamer.Name> names = StopSequenceNamer.name(sequences);
+      for (int i = 0; i < toName.size(); i++) {
+        List<String> sequence = sequences.get(i);
+        toName.get(i).initName(names.get(i).format(sequence::get));
+      }
     }
 
     if (LOG.isDebugEnabled()) {
@@ -164,7 +107,7 @@ public class TripPatternNamer implements GraphBuilderModule {
     }
   }
 
-  private static String stopNameAndId(StopLocation stop) {
-    return stop.getName() + " (" + stop.getId().toString() + ")";
+  private static String stopName(StopLocation stop) {
+    return stop.getName() == null ? stop.getId().getId() : stop.getName().toString();
   }
 }

@@ -106,16 +106,6 @@ final class Variant {
     return line;
   }
 
-  int sharedNodes(Variant other) {
-    int n = 0;
-    for (Node node : sequence) {
-      if (other.contains(node)) {
-        n++;
-      }
-    }
-    return n;
-  }
-
   @Override
   public String toString() {
     return sequence.getFirst() + " -> " + sequence.getLast() + " (" + trips + " trips)";

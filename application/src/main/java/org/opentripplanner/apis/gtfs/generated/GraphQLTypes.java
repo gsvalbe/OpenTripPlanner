@@ -1284,6 +1284,25 @@ public class GraphQLTypes {
     SCOOTER_STANDING,
   }
 
+  public static class GraphQLGeneralPatternNameArgs {
+
+    private String language;
+
+    public GraphQLGeneralPatternNameArgs(Map<String, Object> args) {
+      if (args != null) {
+        this.language = (String) args.get("language");
+      }
+    }
+
+    public String getGraphQLLanguage() {
+      return this.language;
+    }
+
+    public void setGraphQLLanguage(String language) {
+      this.language = language;
+    }
+  }
+
   /**
    * How the trips of a general pattern serve one of its stops. Only trips that reach the stop (it lies
    * between their first and last stop) are counted, so a trip ending earlier does not make it less
@@ -1291,7 +1310,6 @@ public class GraphQLTypes {
    */
   public enum GraphQLGeneralPatternStopStatus {
     ALWAYS,
-    DETOUR,
     SOMETIMES_SKIPPED,
   }
 

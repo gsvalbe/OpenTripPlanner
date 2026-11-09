@@ -30,7 +30,6 @@ public class GeneralPatternStopImpl implements GraphQLDataFetchers.GraphQLGenera
       switch (getSource(environment).status()) {
         case ALWAYS -> GraphQLGeneralPatternStopStatus.ALWAYS;
         case SOMETIMES_SKIPPED -> GraphQLGeneralPatternStopStatus.SOMETIMES_SKIPPED;
-        case DETOUR -> GraphQLGeneralPatternStopStatus.DETOUR;
       };
   }
 

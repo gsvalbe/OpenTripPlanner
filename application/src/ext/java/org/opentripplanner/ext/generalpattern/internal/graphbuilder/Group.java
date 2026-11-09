@@ -2,35 +2,28 @@ package org.opentripplanner.ext.generalpattern.internal.graphbuilder;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
- * A set of variants that form one general pattern, with their merged stop order and, for every
- * variant, how it handles the stops in its span that it does not serve.
+ * A set of variants that form one general pattern, with their merged stop order. Every stop
+ * between a variant's first and last stop that the variant does not serve is a stop it passes
+ * without stopping.
  */
-record Group(List<Variant> members, List<Node> order, Map<Variant, Map<Node, Unserved>> unserved) {
-  enum Unserved {
-    /** The vehicle passes close to the stop without stopping. */
-    PASS,
-    /** The stop is off the variant's route: other variants make a detour to serve it. */
-    DETOUR,
-  }
-
+record Group(List<Variant> members, List<Node> order) {
   Group {
     members = List.copyOf(members);
     order = List.copyOf(order);
-    unserved = Map.copyOf(unserved);
   }
 
   static Group of(Variant variant) {
-    return new Group(List.of(variant), variant.sequence(), Map.of());
+    return new Group(List.of(variant), variant.sequence());
   }
 
   int sharedNodes(Variant variant) {
+    Set<Node> mine = orderSet();
     int n = 0;
     for (Node node : variant.sequence()) {
-      if (orderSet().contains(node)) {
+      if (mine.contains(node)) {
         n++;
       }
     }

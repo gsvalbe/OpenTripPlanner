@@ -50,10 +50,10 @@ class GeneralPatternGraphQLTest {
       new GeneralPatternPlace(C, null, List.of(C))
     ),
     List.of(
-      new GeneralPatternVariant(List.of(ALL_STOPS), bits(0, 1, 2), bits(), 3),
-      new GeneralPatternVariant(List.of(EXPRESS), bits(0, 2), bits(1), 1)
+      new GeneralPatternVariant(List.of(ALL_STOPS), bits(0, 1, 2), 3),
+      new GeneralPatternVariant(List.of(EXPRESS), bits(0, 2), 1)
     )
-  );
+  ).withName(List.of(0, 1, 2), 0);
 
   @Test
   void queryGeneralPatternWithStopsAndBackReferences() {
@@ -62,6 +62,7 @@ class GeneralPatternGraphQLTest {
       {
         generalPattern(id: "F:R1~A~C") {
           gtfsId
+          name
           route { gtfsId generalPatterns { gtfsId } }
           patterns { code generalPattern { gtfsId } }
           stops {
@@ -81,6 +82,7 @@ class GeneralPatternGraphQLTest {
     assertThat(result.getErrors()).isEmpty();
     Map<String, Object> gp = field(result.getData(), "generalPattern");
     assertThat(gp.get("gtfsId")).isEqualTo("F:R1~A~C");
+    assertThat(gp.get("name")).isEqualTo("A - B - C");
     Map<String, Object> route = field(gp, "route");
     assertThat(route.get("generalPatterns")).isEqualTo(List.of(Map.of("gtfsId", "F:R1~A~C")));
 

@@ -10,6 +10,4 @@ public enum StopStatus {
   ALWAYS,
   /** Some trips pass the stop without stopping. */
   SOMETIMES_SKIPPED,
-  /** Some trips serve the stop through a detour that other trips do not take. */
-  DETOUR,
 }

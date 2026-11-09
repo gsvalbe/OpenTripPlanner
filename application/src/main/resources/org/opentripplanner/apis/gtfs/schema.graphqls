@@ -794,8 +794,9 @@ type FeedPublisher {
 
 """
 A general pattern is one readable stop sequence for a route and direction. It merges the route's
-patterns that differ only by platform, skipped stops, short turns or small detours, so that riders
-see one line instead of many near-identical patterns.
+patterns that differ only by platform, skipped stops, or trips that start or end at other stops
+along the line, so that riders see one line instead of many near-identical patterns. Patterns
+that take another road belong to another general pattern.
 
 General patterns describe the planned timetable and are not changed by real-time updates. This is
 a sandbox feature: general patterns exist only when the `GeneralPatterns` feature is enabled.
@@ -803,6 +804,18 @@ a sandbox feature: general patterns exist only when the `GeneralPatterns` featur
 type GeneralPattern {
   "ID of the general pattern in format `FeedId:GeneralPatternId`"
   gtfsId: String!
+  """
+  Name that is unique among the general patterns of the route. It consists of stop names only,
+  separated by ` - `: the first and the last stop and, if needed, a stop in between that only this
+  general pattern serves, for example `A - M - B`.
+  """
+  name(
+    """
+    If translated stop names are available, use this language. If not given, the language of the
+    request (the `Accept-Language` header) is used.
+    """
+    language: String
+  ): String!
   "The patterns merged into this general pattern, most trips first"
   patterns: [Pattern!]!
   "The route this general pattern belongs to"
@@ -3941,8 +3954,6 @@ than `ALWAYS`.
 enum GeneralPatternStopStatus {
   "Every trip that reaches the stop stops there"
   ALWAYS
-  "Some trips serve the stop through a detour that other trips do not take"
-  DETOUR
   "Some trips pass the stop without stopping"
   SOMETIMES_SKIPPED
 }

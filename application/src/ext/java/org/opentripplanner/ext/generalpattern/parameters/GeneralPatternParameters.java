@@ -19,12 +19,9 @@ import org.opentripplanner.utils.tostring.ToStringBuilder;
  *                              have the same normalized name and lie within this distance (meters).
  * @param minSharedStations A pattern only joins a general pattern when they share at least this
  *                          many stations.
- * @param corridorBuffer Distance (meters) used when testing whether two variants run along the same
- *                       corridor.
- * @param corridorMinOverlap Share of a variant's shape that must lie within {@code corridorBuffer}
- *                           of the other variant for an ambiguous merge to be accepted.
  * @param skipRadius Maximum distance (meters) between an unserved stop and a variant's shape for the
- *                   stop to count as passed without stopping, rather than as a detour not taken.
+ *                   stop to count as passed without stopping. A variant that does not pass a stop
+ *                   of the merged sequence this closely takes another road, and is not merged.
  * @param railSkipRadius Same as {@code skipRadius}, for rail.
  */
 public record GeneralPatternParameters(
@@ -34,8 +31,6 @@ public record GeneralPatternParameters(
   Set<TransitMode> excludeModes,
   double stationFallbackRadius,
   int minSharedStations,
-  double corridorBuffer,
-  double corridorMinOverlap,
   double skipRadius,
   double railSkipRadius
 ) {
@@ -46,8 +41,6 @@ public record GeneralPatternParameters(
     Set.of(),
     400,
     2,
-    1000,
-    0.85,
     400,
     250
   );
@@ -58,14 +51,10 @@ public record GeneralPatternParameters(
     excludeAgencies = Set.copyOf(excludeAgencies);
     excludeModes = Set.copyOf(excludeModes);
     requirePositive(stationFallbackRadius, "stationFallbackRadius");
-    requirePositive(corridorBuffer, "corridorBuffer");
     requirePositive(skipRadius, "skipRadius");
     requirePositive(railSkipRadius, "railSkipRadius");
     if (minSharedStations < 1) {
       throw new IllegalArgumentException("minSharedStations must be at least 1");
-    }
-    if (corridorMinOverlap < 0 || corridorMinOverlap > 1) {
-      throw new IllegalArgumentException("corridorMinOverlap must be in [0, 1]");
     }
   }
 
@@ -103,8 +92,6 @@ public record GeneralPatternParameters(
       .addCol("excludeModes", excludeModes)
       .addNum("stationFallbackRadius", stationFallbackRadius)
       .addNum("minSharedStations", minSharedStations)
-      .addNum("corridorBuffer", corridorBuffer)
-      .addNum("corridorMinOverlap", corridorMinOverlap)
       .addNum("skipRadius", skipRadius)
       .addNum("railSkipRadius", railSkipRadius)
       .toString();
