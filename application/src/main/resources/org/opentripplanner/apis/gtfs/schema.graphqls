@@ -2570,7 +2570,7 @@ type Route implements Node {
   mode: TransitMode
   "Notices of this trip which are known ahead of time."
   notices: [Notice!]! @deprecated(reason : "Experimental API that can be changed without notice.")
-  "List of patterns which operate on this route"
+  "List of scheduled patterns which operate on this route. Patterns created by real-time updates are not included."
   patterns(
     """
     Filter patterns by the service dates they operate on.
@@ -3004,12 +3004,26 @@ type Stoptime {
   Constrained transfers where this specific trip+stop combination is the arrival point.
   Only returns transfers whose TO endpoint matches both this stoptime's trip and stop position.
   """
-  incomingTransfers: [TripTransfer!]!
+  incomingTransfers(
+    """
+    Only return transfers for this service date, i.e. where both trips of the transfer run on it.
+    Transfer endpoints that are not specific trips (e.g. stop or route) are kept.
+    If omitted, all transfers are returned regardless of service date.
+    """
+    date: LocalDate
+  ): [TripTransfer!]!
   """
   Constrained transfers where this specific trip+stop combination is the departure point.
   Only returns transfers whose FROM endpoint matches both this stoptime's trip and stop position.
   """
-  outgoingTransfers: [TripTransfer!]!
+  outgoingTransfers(
+    """
+    Only return transfers for this service date, i.e. where both trips of the transfer run on it.
+    Transfer endpoints that are not specific trips (e.g. stop or route) are kept.
+    If omitted, all transfers are returned regardless of service date.
+    """
+    date: LocalDate
+  ): [TripTransfer!]!
   """
   Whether the vehicle can be boarded at this stop. This field can also be used
   to indicate if boarding is possible only with special arrangements.
@@ -3220,7 +3234,14 @@ type Trip implements Node {
   "Global object ID provided by Relay. This value can be used to refetch this object using **node** query."
   id: ID!
   "Constrained transfers arriving at this trip."
-  incomingTransfers: [TripTransfer!]!
+  incomingTransfers(
+    """
+    Only return transfers for this service date, i.e. where both trips of the transfer run on it.
+    Transfer endpoints that are not specific trips (e.g. stop or route) are kept.
+    If omitted, all transfers are returned regardless of service date.
+    """
+    date: LocalDate
+  ): [TripTransfer!]!
   """
   Is this a replacement trip.
   Only true for GTFS-sourced data if set by the extended GTFS route type, because GTFS does not implement
@@ -3239,7 +3260,14 @@ type Trip implements Node {
   "Return the trip on a specific service date or `null` if the trip does not run on it."
   onServiceDate(date: LocalDate!): TripOnServiceDate
   "Constrained transfers departing from this trip."
-  outgoingTransfers: [TripTransfer!]!
+  outgoingTransfers(
+    """
+    Only return transfers for this service date, i.e. where both trips of the transfer run on it.
+    Transfer endpoints that are not specific trips (e.g. stop or route) are kept.
+    If omitted, all transfers are returned regardless of service date.
+    """
+    date: LocalDate
+  ): [TripTransfer!]!
   "The pattern the trip is running on"
   pattern: Pattern
   """

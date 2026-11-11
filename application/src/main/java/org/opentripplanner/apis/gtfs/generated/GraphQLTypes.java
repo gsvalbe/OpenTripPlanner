@@ -6088,6 +6088,44 @@ public class GraphQLTypes {
     }
   }
 
+  public static class GraphQLStoptimeIncomingTransfersArgs {
+
+    private java.time.LocalDate date;
+
+    public GraphQLStoptimeIncomingTransfersArgs(Map<String, Object> args) {
+      if (args != null) {
+        this.date = (java.time.LocalDate) args.get("date");
+      }
+    }
+
+    public java.time.LocalDate getGraphQLDate() {
+      return this.date;
+    }
+
+    public void setGraphQLDate(java.time.LocalDate date) {
+      this.date = date;
+    }
+  }
+
+  public static class GraphQLStoptimeOutgoingTransfersArgs {
+
+    private java.time.LocalDate date;
+
+    public GraphQLStoptimeOutgoingTransfersArgs(Map<String, Object> args) {
+      if (args != null) {
+        this.date = (java.time.LocalDate) args.get("date");
+      }
+    }
+
+    public java.time.LocalDate getGraphQLDate() {
+      return this.date;
+    }
+
+    public void setGraphQLDate(java.time.LocalDate date) {
+      this.date = date;
+    }
+  }
+
   public static class GraphQLTimetablePreferencesInput {
 
     private Boolean excludeRealTimeUpdates;
@@ -6628,11 +6666,49 @@ public class GraphQLTypes {
     }
   }
 
+  public static class GraphQLTripIncomingTransfersArgs {
+
+    private java.time.LocalDate date;
+
+    public GraphQLTripIncomingTransfersArgs(Map<String, Object> args) {
+      if (args != null) {
+        this.date = (java.time.LocalDate) args.get("date");
+      }
+    }
+
+    public java.time.LocalDate getGraphQLDate() {
+      return this.date;
+    }
+
+    public void setGraphQLDate(java.time.LocalDate date) {
+      this.date = date;
+    }
+  }
+
   public static class GraphQLTripOnServiceDateArgs {
 
     private java.time.LocalDate date;
 
     public GraphQLTripOnServiceDateArgs(Map<String, Object> args) {
+      if (args != null) {
+        this.date = (java.time.LocalDate) args.get("date");
+      }
+    }
+
+    public java.time.LocalDate getGraphQLDate() {
+      return this.date;
+    }
+
+    public void setGraphQLDate(java.time.LocalDate date) {
+      this.date = date;
+    }
+  }
+
+  public static class GraphQLTripOutgoingTransfersArgs {
+
+    private java.time.LocalDate date;
+
+    public GraphQLTripOutgoingTransfersArgs(Map<String, Object> args) {
       if (args != null) {
         this.date = (java.time.LocalDate) args.get("date");
       }

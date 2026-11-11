@@ -209,7 +209,13 @@ public class RouteImpl implements GraphQLDataFetchers.GraphQLRoute {
   public DataFetcher<Iterable<TripPattern>> patterns() {
     return environment -> {
       final TransitService transitService = getTransitService(environment);
-      var patterns = transitService.findPatterns(getSource(environment));
+      // Patterns created by real-time updates have no name, headsign or direction and are kept
+      // after their trips are gone, so they are not listed.
+      var patterns = transitService
+        .findPatterns(getSource(environment))
+        .stream()
+        .filter(pattern -> !pattern.isRealTimeTripPattern())
+        .toList();
 
       var args = new GraphQLTypes.GraphQLRoutePatternsArgs(environment.getArguments());
 

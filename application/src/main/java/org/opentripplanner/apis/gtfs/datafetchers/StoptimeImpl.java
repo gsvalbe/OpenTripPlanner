@@ -10,6 +10,7 @@ import org.opentripplanner.apis.gtfs.generated.GraphQLDataFetchers;
 import org.opentripplanner.apis.gtfs.generated.GraphQLTypes;
 import org.opentripplanner.apis.gtfs.mapping.PickDropMapper;
 import org.opentripplanner.apis.gtfs.mapping.RealtimeStateMapper;
+import org.opentripplanner.apis.gtfs.service.ApiTransitService;
 import org.opentripplanner.framework.graphql.GraphQLUtils;
 import org.opentripplanner.model.TripTimeOnDate;
 import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
@@ -117,7 +118,9 @@ public class StoptimeImpl implements GraphQLDataFetchers.GraphQLStoptime {
   public DataFetcher<Iterable<ConstrainedTransfer>> outgoingTransfers() {
     return environment -> {
       var stoptime = getSource(environment);
-      return getTransitService(environment)
+      var transitService = getTransitService(environment);
+      var args = new GraphQLTypes.GraphQLStoptimeOutgoingTransfersArgs(environment.getArguments());
+      var transfers = transitService
         .findTransfersByFromTrip(stoptime.getTrip())
         .stream()
         .filter(
@@ -126,6 +129,10 @@ public class StoptimeImpl implements GraphQLDataFetchers.GraphQLStoptime {
             tp.getStopPositionInPattern() == stoptime.getStopPosition()
         )
         .toList();
+      return new ApiTransitService(transitService).filterTransfersByServiceDate(
+        transfers,
+        args.getGraphQLDate()
+      );
     };
   }
 
@@ -133,7 +140,9 @@ public class StoptimeImpl implements GraphQLDataFetchers.GraphQLStoptime {
   public DataFetcher<Iterable<ConstrainedTransfer>> incomingTransfers() {
     return environment -> {
       var stoptime = getSource(environment);
-      return getTransitService(environment)
+      var transitService = getTransitService(environment);
+      var args = new GraphQLTypes.GraphQLStoptimeIncomingTransfersArgs(environment.getArguments());
+      var transfers = transitService
         .findTransfersByToTrip(stoptime.getTrip())
         .stream()
         .filter(
@@ -142,6 +151,10 @@ public class StoptimeImpl implements GraphQLDataFetchers.GraphQLStoptime {
             tp.getStopPositionInPattern() == stoptime.getStopPosition()
         )
         .toList();
+      return new ApiTransitService(transitService).filterTransfersByServiceDate(
+        transfers,
+        args.getGraphQLDate()
+      );
     };
   }
 

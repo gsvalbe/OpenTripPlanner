@@ -23,6 +23,11 @@ import org.opentripplanner.model.TripTimeOnDate;
 import org.opentripplanner.model.plan.leg.ScheduledTransitLegBuilder;
 import org.opentripplanner.model.plan.leg.StreetLeg;
 import org.opentripplanner.street.search.TraverseMode;
+import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
+import org.opentripplanner.transfer.constrained.model.StopTransferPoint;
+import org.opentripplanner.transfer.constrained.model.TransferConstraint;
+import org.opentripplanner.transfer.constrained.model.TransferPoint;
+import org.opentripplanner.transfer.constrained.model.TripTransferPoint;
 import org.opentripplanner.transit.model.TransitTestEnvironment;
 import org.opentripplanner.transit.model.TransitTestEnvironmentBuilder;
 import org.opentripplanner.transit.model.TripInput;
@@ -380,6 +385,36 @@ class ApiTransitServiceTest {
     // The real TripOnServiceDate (keyed by its own id) is preferred over a synthetic one.
     assertEquals("DSJ1", result.get().getId().getId());
     assertEquals(trip, result.get().getTrip());
+  }
+
+  @Test
+  void filterTransfersByServiceDate() {
+    var nextDay = SERVICE_DATE.plusDays(1);
+    var bothDaysInput = TRIP2_INPUT.withServiceDates(SERVICE_DATE, nextDay);
+    var env = envBuilder.addTrip(TRIP1_INPUT).addTrip(bothDaysInput).build();
+    var service = new ApiTransitService(env.transitService());
+    var trip1 = env.tripData(TRIP_1_ID).trip();
+    var trip2 = env.tripData(TRIP_2_ID).trip();
+
+    var tripToTrip = transfer(new TripTransferPoint(trip1, 1), new TripTransferPoint(trip2, 1));
+    var tripToStop = transfer(new TripTransferPoint(trip2, 1), new StopTransferPoint(STOP_B));
+    var transfers = List.of(tripToTrip, tripToStop);
+
+    assertThat(service.filterTransfersByServiceDate(transfers, null))
+      .containsExactly(tripToTrip, tripToStop)
+      .inOrder();
+    assertThat(service.filterTransfersByServiceDate(transfers, SERVICE_DATE))
+      .containsExactly(tripToTrip, tripToStop)
+      .inOrder();
+    // Trip 1 does not run on the next day, so only the transfer that does not involve it remains.
+    assertThat(service.filterTransfersByServiceDate(transfers, nextDay)).containsExactly(
+      tripToStop
+    );
+    assertThat(service.filterTransfersByServiceDate(transfers, nextDay.plusDays(1))).isEmpty();
+  }
+
+  private static ConstrainedTransfer transfer(TransferPoint from, TransferPoint to) {
+    return new ConstrainedTransfer(null, from, to, TransferConstraint.REGULAR_TRANSFER);
   }
 
   private static GtfsRealtime.TripUpdate skipSecondStop(TripUpdateBuilder builder) {

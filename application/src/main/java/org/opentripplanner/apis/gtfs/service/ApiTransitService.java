@@ -15,6 +15,9 @@ import org.opentripplanner.core.model.time.LocalDateRange;
 import org.opentripplanner.core.model.time.TimePeriod;
 import org.opentripplanner.model.TripTimeOnDate;
 import org.opentripplanner.model.plan.Leg;
+import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
+import org.opentripplanner.transfer.constrained.model.TransferPoint;
+import org.opentripplanner.transfer.constrained.model.TripTransferPoint;
 import org.opentripplanner.transit.api.request.CancellationPolicy;
 import org.opentripplanner.transit.api.request.TripTimeOnDateRequest;
 import org.opentripplanner.transit.model.network.TripPattern;
@@ -155,6 +158,35 @@ public class ApiTransitService {
     return Optional.of(
       TripOnServiceDate.of(tripId).withTrip(trip).withServiceDate(serviceDate).build()
     );
+  }
+
+  /**
+   * Keep only the constrained transfers that can be used on the given service date, i.e. where
+   * every trip-specific endpoint (FROM and TO) refers to a trip that runs on that date. Endpoints
+   * that are not bound to a single trip (stop, station or route transfer points) do not restrict
+   * the date. If {@code serviceDate} is {@code null}, all transfers are returned unchanged.
+   */
+  public List<ConstrainedTransfer> filterTransfersByServiceDate(
+    List<ConstrainedTransfer> transfers,
+    @Nullable LocalDate serviceDate
+  ) {
+    if (serviceDate == null) {
+      return transfers;
+    }
+    return transfers
+      .stream()
+      .filter(
+        t ->
+          endpointRunsOnDate(t.getFrom(), serviceDate) && endpointRunsOnDate(t.getTo(), serviceDate)
+      )
+      .toList();
+  }
+
+  private boolean endpointRunsOnDate(TransferPoint point, LocalDate serviceDate) {
+    if (point instanceof TripTransferPoint tripPoint) {
+      return findOrCreateTripOnServiceDate(tripPoint.getTrip().getId(), serviceDate).isPresent();
+    }
+    return true;
   }
 
   /**

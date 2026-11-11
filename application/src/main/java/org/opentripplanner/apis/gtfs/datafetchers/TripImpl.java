@@ -57,6 +57,7 @@ import org.opentripplanner.transit.model.timetable.Timetable;
 import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.model.timetable.TripOnServiceDate;
 import org.opentripplanner.transit.model.timetable.TripTimes;
+import org.opentripplanner.transit.service.ReplacementHelper;
 import org.opentripplanner.transit.service.TransitService;
 import org.opentripplanner.utils.collection.ListUtils;
 import org.opentripplanner.utils.time.ServiceDateUtils;
@@ -328,9 +329,12 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
   @Override
   public DataFetcher<Boolean> isReplacement() {
     return environment ->
+    {
       getTransitService(environment)
-        .getReplacementHelper()
+        .getReplacementHelper();
+      return ReplacementHelper
         .isReplacementTrip(getSource(environment));
+    };
   }
 
   @Override
@@ -478,14 +482,26 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
 
   @Override
   public DataFetcher<Iterable<ConstrainedTransfer>> outgoingTransfers() {
-    return environment ->
-      getTransitService(environment).findTransfersByFromTrip(getSource(environment));
+    return environment -> {
+      var transitService = getTransitService(environment);
+      var args = new GraphQLTypes.GraphQLTripOutgoingTransfersArgs(environment.getArguments());
+      return new ApiTransitService(transitService).filterTransfersByServiceDate(
+        transitService.findTransfersByFromTrip(getSource(environment)),
+        args.getGraphQLDate()
+      );
+    };
   }
 
   @Override
   public DataFetcher<Iterable<ConstrainedTransfer>> incomingTransfers() {
-    return environment ->
-      getTransitService(environment).findTransfersByToTrip(getSource(environment));
+    return environment -> {
+      var transitService = getTransitService(environment);
+      var args = new GraphQLTypes.GraphQLTripIncomingTransfersArgs(environment.getArguments());
+      return new ApiTransitService(transitService).filterTransfersByServiceDate(
+        transitService.findTransfersByToTrip(getSource(environment)),
+        args.getGraphQLDate()
+      );
+    };
   }
 
   @Override
