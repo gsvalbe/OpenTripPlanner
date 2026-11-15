@@ -1,11 +1,18 @@
 package org.opentripplanner.ext.geocoder;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
+import org.opentripplanner.core.model.id.FeedScopedId;
+import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
+import org.opentripplanner.ext.generalpattern.model.GeneralPattern;
 import org.opentripplanner.street.geometry.WgsCoordinate;
 import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.network.TripPattern;
@@ -21,8 +28,14 @@ class TransitDocumentMapper {
 
   private final TransitService transitService;
 
-  TransitDocumentMapper(TransitService transitService) {
+  private final GeneralPatternRepository generalPatternRepository;
+
+  TransitDocumentMapper(
+    TransitService transitService,
+    @Nullable GeneralPatternRepository generalPatternRepository
+  ) {
     this.transitService = transitService;
+    this.generalPatternRepository = generalPatternRepository;
   }
 
   /**
@@ -61,6 +74,10 @@ class TransitDocumentMapper {
    * near-identical rows for a query like "5" and bury everything else. Patterns are therefore
    * deduplicated by their searchable text within a route, and dropped entirely when that text adds
    * nothing over the route.
+   * <p>
+   * Trip patterns merged into a general pattern are indexed once, as that general pattern, under its
+   * unique readable name. The document id is that of the general pattern's main trip pattern, so
+   * the result still resolves to a pattern.
    */
   List<LuceneTransitDocument> generatePatternDocuments() {
     return transitService
@@ -76,9 +93,13 @@ class TransitDocumentMapper {
       .map(name -> name.toLowerCase())
       .collect(Collectors.toSet());
 
-    return transitService
+    var covered = new HashSet<FeedScopedId>();
+    var generalDocs = generalPatternDocumentsFor(route, routeNames, covered);
+
+    var tripPatternDocs = transitService
       .findPatterns(route)
       .stream()
+      .filter(pattern -> !covered.contains(pattern.getId()))
       .map(pattern -> new PatternWithNames(pattern, distinctiveNames(pattern, routeNames)))
       .filter(p -> !p.names().isEmpty())
       // one document per distinct set of names: patterns that read the same are indistinguishable
@@ -96,6 +117,56 @@ class TransitDocumentMapper {
         )
       )
       .toList();
+    return ListUtils.combine(generalDocs, tripPatternDocs);
+  }
+
+  /**
+   * One document per general pattern of the route. Every trip pattern merged into one is added to
+   * {@code covered}, so that it is not indexed on its own.
+   */
+  private List<LuceneTransitDocument> generalPatternDocumentsFor(
+    Route route,
+    Set<String> routeNames,
+    Set<FeedScopedId> covered
+  ) {
+    if (generalPatternRepository == null) {
+      return List.of();
+    }
+    var docs = new ArrayList<LuceneTransitDocument>();
+    for (GeneralPattern gp : generalPatternRepository.findByRoute(route.getId())) {
+      if (gp.tripPatterns().isEmpty()) {
+        continue;
+      }
+      var main = gp.tripPatterns().getFirst();
+      gp.tripPatterns().forEach(p -> covered.add(p.getId()));
+
+      var names = new LinkedHashSet<String>();
+      names.add(gp.name(Locale.ROOT));
+      for (var pattern : gp.tripPatterns()) {
+        names.add(pattern.getTripPatternName());
+      }
+      names.remove(null);
+      names.removeIf(name -> name.isBlank() || routeNames.contains(name.toLowerCase()));
+      if (names.isEmpty()) {
+        continue;
+      }
+      docs.add(
+        new LuceneTransitDocument(
+          main.getId().toString(),
+          names,
+          ListUtils.ofNullable(route.getShortName()),
+          main.getMode(),
+          coordinatesOf(
+            gp
+              .stops()
+              .stream()
+              .map(s -> s.stop())
+              .toList()
+          )
+        )
+      );
+    }
+    return docs;
   }
 
   /**

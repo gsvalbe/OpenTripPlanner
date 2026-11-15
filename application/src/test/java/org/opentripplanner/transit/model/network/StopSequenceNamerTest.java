@@ -47,6 +47,29 @@ class StopSequenceNamerTest {
       .inOrder();
   }
 
+  @Test
+  void intermediateTerminiAreNamedAtMostThree() {
+    var seq = List.of("A", "B", "C", "D", "E", "F", "G");
+    var names = StopSequenceNamer.name(List.of(seq), List.of(List.of(1, 2, 3, 4, 5)));
+    assertThat(names.getFirst().format(seq::get)).isEqualTo("A - B - C - D - G");
+  }
+
+  @Test
+  void terminiAndDistinguishingStopsMakeNamesUnique() {
+    var s1 = List.of("A", "B", "C", "D", "E");
+    var s2 = List.of("A", "B", "C", "X", "E");
+    var names = StopSequenceNamer.name(List.of(s1, s2), List.of(List.of(1), List.of(1)));
+    assertThat(names.get(0).format(s1::get)).isEqualTo("A - B - D - E");
+    assertThat(names.get(1).format(s2::get)).isEqualTo("A - B - X - E");
+  }
+
+  @Test
+  void terminusWithTheNameOfAnEndIsSkipped() {
+    var seq = List.of("A", "B", "A", "C");
+    var names = StopSequenceNamer.name(List.of(seq), List.of(List.of(2, 1)));
+    assertThat(names.getFirst().format(seq::get)).isEqualTo("A - B - C");
+  }
+
   @SafeVarargs
   private static List<String> names(List<String>... sequences) {
     var input = List.of(sequences);

@@ -60,6 +60,7 @@ import org.apache.lucene.store.ByteBuffersDirectory;
 import org.apache.lucene.util.BytesRef;
 import org.opentripplanner.core.model.i18n.I18NString;
 import org.opentripplanner.core.model.id.FeedScopedId;
+import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationService;
 import org.opentripplanner.street.geometry.WgsCoordinate;
 import org.opentripplanner.transit.model.basic.TransitMode;
@@ -138,9 +139,14 @@ public class LuceneIndex implements Serializable {
    */
   public LuceneIndex(
     TransitRepository transitRepository,
-    StopConsolidationService stopConsolidationService
+    StopConsolidationService stopConsolidationService,
+    @Nullable GeneralPatternRepository generalPatternRepository
   ) {
-    this(new DefaultTransitService(transitRepository), stopConsolidationService);
+    this(
+      new DefaultTransitService(transitRepository),
+      stopConsolidationService,
+      generalPatternRepository
+    );
   }
 
   /**
@@ -150,8 +156,19 @@ public class LuceneIndex implements Serializable {
     TransitService transitService,
     @Nullable StopConsolidationService stopConsolidationService
   ) {
+    this(transitService, stopConsolidationService, null);
+  }
+
+  /**
+   * This method is only visible for testing.
+   */
+  LuceneIndex(
+    TransitService transitService,
+    @Nullable StopConsolidationService stopConsolidationService,
+    @Nullable GeneralPatternRepository generalPatternRepository
+  ) {
     this.stopClusterMapper = new StopClusterMapper(transitService, stopConsolidationService);
-    var transitDocumentMapper = new TransitDocumentMapper(transitService);
+    var transitDocumentMapper = new TransitDocumentMapper(transitService, generalPatternRepository);
 
     this.analyzer = new PerFieldAnalyzerWrapper(
       new StandardAnalyzer(),
@@ -380,9 +397,10 @@ public class LuceneIndex implements Serializable {
   }
 
   /**
-   * Matches names containing the query words, also in the middle of a name. Each word matches when
-   * the name contains at least {@link #MIN_NGRAM_COVERAGE} of the word's n-grams, and a name scores
-   * higher the more words it matches.
+   * Matches names containing all of the query words, also in the middle of a name. Each word matches
+   * when the name contains at least {@link #MIN_NGRAM_COVERAGE} of the word's n-grams. Every word
+   * is required: otherwise "Whatever iela" would match every name that merely contains the common
+   * word "iela".
    */
   private Query ngramNameQuery(String text) {
     var builder = new BooleanQuery.Builder();
@@ -401,7 +419,7 @@ public class LuceneIndex implements Serializable {
           .add(scoring.build(), Occur.MUST)
           .add(coverage.build(), Occur.FILTER)
           .build(),
-        Occur.SHOULD
+        Occur.MUST
       );
     }
     return builder.build();

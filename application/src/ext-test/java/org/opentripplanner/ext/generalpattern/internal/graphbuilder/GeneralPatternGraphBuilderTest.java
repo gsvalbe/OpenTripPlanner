@@ -156,11 +156,11 @@ class GeneralPatternGraphBuilderTest {
   }
 
   @Test
-  void namesAreFirstAndLastStop() {
+  void namesAreFirstAndLastStopAndIntermediateTermini() {
     var gps = build(pattern(3, a, b, c, d, e), pattern(1, a, b, c), pattern(2, e, d, c, b, a));
 
     assertEquals(
-      List.of("A - E", "E - A"),
+      List.of("A - C - E", "E - A"),
       gps
         .stream()
         .map(gp -> gp.name(Locale.ROOT))

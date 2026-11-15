@@ -318,6 +318,21 @@ class LuceneIndexSearchTest {
   }
 
   @Test
+  void commonWordAloneDoesNotMatchWhenAnotherQueryWordIsMissing() {
+    var hits = ids(index.search("Whatever iela", RIGA, null, 10));
+
+    assertThat(hits).isEmpty();
+  }
+
+  @Test
+  void everyQueryWordMustMatch() {
+    var hits = ids(index.search("Krustpils iela", RIGA, null, 10));
+
+    assertThat(hits).contains(KRUSTPILS_IELA.getId());
+    assertThat(hits).doesNotContain(DEPO_IELA.getId());
+  }
+
+  @Test
   void nameSharingOnlyAFragmentWithTheQueryDoesNotMatch() {
     var hits = ids(index.search("Krustmala", RIGA, null, 10));
 

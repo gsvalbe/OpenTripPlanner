@@ -4,6 +4,7 @@ import dagger.Module;
 import dagger.Provides;
 import jakarta.inject.Singleton;
 import javax.annotation.Nullable;
+import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
 import org.opentripplanner.ext.geocoder.LuceneIndex;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationService;
 import org.opentripplanner.framework.application.OTPFeature;
@@ -20,10 +21,11 @@ public class GeocoderModule {
   @Nullable
   LuceneIndex luceneIndex(
     TransitRepository transitRepository,
+    GeneralPatternRepository generalPatternRepository,
     @Nullable StopConsolidationService stopConsolidationService
   ) {
     if (OTPFeature.SandboxAPIGeocoder.isOn()) {
-      return new LuceneIndex(transitRepository, stopConsolidationService);
+      return new LuceneIndex(transitRepository, stopConsolidationService, generalPatternRepository);
     } else {
       return null;
     }

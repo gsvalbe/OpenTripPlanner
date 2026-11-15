@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.IntStream;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
 import org.opentripplanner.ext.generalpattern.model.GeneralPattern;
@@ -149,13 +150,34 @@ public class GeneralPatternGraphBuilder implements GraphBuilderModule {
           .toList()
       )
       .toList();
-    List<StopSequenceNamer.Name> names = StopSequenceNamer.name(sequences);
+    List<List<Integer>> termini = generalPatterns
+      .stream()
+      .map(GeneralPatternGraphBuilder::intermediateTermini)
+      .toList();
+    List<StopSequenceNamer.Name> names = StopSequenceNamer.name(sequences, termini);
     List<GeneralPattern> result = new ArrayList<>(generalPatterns.size());
     for (int i = 0; i < generalPatterns.size(); i++) {
       var name = names.get(i);
       result.add(generalPatterns.get(i).withName(name.stopIndexes(), name.number()));
     }
     return result;
+  }
+
+  /**
+   * Positions of the intermediate stops where trips start or end, those with the most such trips
+   * first. They are part of the name, because they tell a rider where short trips turn.
+   */
+  private static List<Integer> intermediateTermini(GeneralPattern gp) {
+    var stops = gp.stops();
+    return IntStream.range(1, stops.size() - 1)
+      .filter(k -> stops.get(k).tripsStartHere() || stops.get(k).tripsEndHere())
+      .boxed()
+      .sorted(
+        Comparator.comparingInt(
+          (Integer k) -> stops.get(k).startingTrips() + stops.get(k).endingTrips()
+        ).reversed()
+      )
+      .toList();
   }
 
   private static List<Node> toSequence(
