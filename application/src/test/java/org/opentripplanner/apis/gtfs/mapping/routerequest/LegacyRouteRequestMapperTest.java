@@ -34,6 +34,8 @@ import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.ext.fares.service.gtfs.v1.DefaultFareService;
 import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternRepository;
 import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternService;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingRepository;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingService;
 import org.opentripplanner.model.plan.PlanTestConstants;
 import org.opentripplanner.place.nearbystopfinder.StreetNearbyStopFinder;
 import org.opentripplanner.place.placefinder.StreetNearbyPlaceFinder;
@@ -104,7 +106,8 @@ class LegacyRouteRequestMapperTest implements PlanTestConstants {
       StreetNearbyStopFinder.of(linkingContextFactory).build(),
       routeRequest,
       null,
-      new DefaultGeneralPatternService(new DefaultGeneralPatternRepository())
+      new DefaultGeneralPatternService(new DefaultGeneralPatternRepository()),
+      new DefaultStopBearingService(new DefaultStopBearingRepository())
     );
   }
 

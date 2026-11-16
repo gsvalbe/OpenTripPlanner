@@ -27,6 +27,8 @@ import org.opentripplanner.ext.interactivelauncher.configuration.InteractiveLaun
 import org.opentripplanner.ext.ridehailing.configure.RideHailingServicesModule;
 import org.opentripplanner.ext.sorlandsbanen.SorlandsbanenNorwayService;
 import org.opentripplanner.ext.sorlandsbanen.configure.SorlandsbanenNorwayModule;
+import org.opentripplanner.ext.stopbearing.StopBearingRepository;
+import org.opentripplanner.ext.stopbearing.configure.StopBearingServiceModule;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationRepository;
 import org.opentripplanner.ext.stopconsolidation.configure.StopConsolidationServiceModule;
 import org.opentripplanner.framework.transaction.UpdateManager;
@@ -106,6 +108,7 @@ import org.opentripplanner.warmup.configure.WarmupModule;
     SorlandsbanenNorwayModule.class,
     StopConsolidationServiceModule.class,
     GeneralPatternServiceModule.class,
+    StopBearingServiceModule.class,
     StreetLimitationParametersServiceModule.class,
     TransitModule.class,
     TransitAlertServiceModule.class,
@@ -184,6 +187,8 @@ public interface ConstructApplicationFactory {
 
   GeneralPatternRepository generalPatternRepository();
 
+  StopBearingRepository stopBearingRepository();
+
   StreetRepository streetRepository();
 
   @Nullable
@@ -230,6 +235,9 @@ public interface ConstructApplicationFactory {
 
     @BindsInstance
     Builder generalPatternRepository(GeneralPatternRepository generalPatternRepository);
+
+    @BindsInstance
+    Builder stopBearingRepository(StopBearingRepository stopBearingRepository);
 
     @BindsInstance
     Builder vehicleParkingRepository(VehicleParkingRepository parkingRepository);

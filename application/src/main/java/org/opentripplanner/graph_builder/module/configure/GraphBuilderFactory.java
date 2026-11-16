@@ -19,6 +19,9 @@ import org.opentripplanner.ext.flex.AreaStopsToVerticesMapper;
 import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
 import org.opentripplanner.ext.generalpattern.configure.GeneralPatternGraphBuilderModule;
 import org.opentripplanner.ext.generalpattern.internal.graphbuilder.GeneralPatternGraphBuilder;
+import org.opentripplanner.ext.stopbearing.StopBearingRepository;
+import org.opentripplanner.ext.stopbearing.configure.StopBearingGraphBuilderModule;
+import org.opentripplanner.ext.stopbearing.internal.graphbuilder.StopBearingGraphBuilder;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationModule;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationRepository;
 import org.opentripplanner.ext.transferanalyzer.DirectTransferAnalyzer;
@@ -66,6 +69,7 @@ import org.opentripplanner.transit.service.TransitRepository;
     GraphBuilderModule.class,
     GraphBuilderModules.class,
     OsmInfoGraphBuildServiceModule.class,
+    StopBearingGraphBuilderModule.class,
     VertexLinkerGraphBuildingModule.class,
   }
 )
@@ -100,6 +104,8 @@ public interface GraphBuilderFactory {
   EmpiricalDelayGraphBuilder empiricalDelayGraphBuilder();
 
   GeneralPatternGraphBuilder generalPatternGraphBuilder();
+
+  StopBearingGraphBuilder stopBearingGraphBuilder();
 
   @Nullable
   RouteToCentroidStationIdsValidator routeToCentroidStationIdValidator();
@@ -164,5 +170,8 @@ public interface GraphBuilderFactory {
 
     @BindsInstance
     Builder generalPatternRepository(GeneralPatternRepository generalPatternRepository);
+
+    @BindsInstance
+    Builder stopBearingRepository(StopBearingRepository stopBearingRepository);
   }
 }

@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import org.glassfish.grizzly.http.server.Request;
 import org.opentripplanner.apis.support.TileJson;
+import org.opentripplanner.ext.stopbearing.StopBearingService;
 import org.opentripplanner.ext.vectortiles.layers.areastops.AreaStopsLayerBuilder;
 import org.opentripplanner.ext.vectortiles.layers.ptstops.PTStopsLayerBuilder;
 import org.opentripplanner.ext.vectortiles.layers.stations.StationsLayerBuilder;
@@ -48,6 +49,7 @@ public class VectorTilesResource {
   private final VehicleRentalService vehicleRentalService;
   private final VehicleParkingService vehicleParkingService;
   private final TransitAlertService transitAlertService;
+  private final StopBearingService stopBearingService;
   private final String ignoreRouterId;
   private final Locale locale;
 
@@ -58,6 +60,7 @@ public class VectorTilesResource {
     @Context VehicleRentalService vehicleRentalService,
     @Context VehicleParkingService vehicleParkingService,
     @Context TransitAlertService transitAlertService,
+    @Context StopBearingService stopBearingService,
     @Context Request grizzlyRequest,
     /**
      * @deprecated The support for multiple routers are removed from OTP2.
@@ -72,6 +75,7 @@ public class VectorTilesResource {
     this.vehicleRentalService = vehicleRentalService;
     this.vehicleParkingService = vehicleParkingService;
     this.transitAlertService = transitAlertService;
+    this.stopBearingService = stopBearingService;
     this.ignoreRouterId = ignoreRouterId;
   }
 
@@ -96,7 +100,8 @@ public class VectorTilesResource {
         transitService,
         vehicleRentalService,
         vehicleParkingService,
-        transitAlertService
+        transitAlertService,
+        stopBearingService
       )
     );
   }
@@ -183,6 +188,7 @@ public class VectorTilesResource {
       );
       case StopOrStation -> new PTStopsLayerBuilder(
         context.transitService(),
+        context.stopBearingService(),
         layerParameters,
         locale
       );
@@ -211,6 +217,7 @@ public class VectorTilesResource {
     TransitService transitService,
     VehicleRentalService vehicleRentalService,
     VehicleParkingService vehicleParkingService,
-    TransitAlertService transitAlertService
+    TransitAlertService transitAlertService,
+    StopBearingService stopBearingService
   ) {}
 }

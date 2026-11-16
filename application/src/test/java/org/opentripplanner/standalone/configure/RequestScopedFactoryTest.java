@@ -24,6 +24,9 @@ import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternServ
 import org.opentripplanner.ext.geocoder.LuceneIndex;
 import org.opentripplanner.ext.ridehailing.RideHailingService;
 import org.opentripplanner.ext.sorlandsbanen.SorlandsbanenNorwayService;
+import org.opentripplanner.ext.stopbearing.StopBearingService;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingRepository;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingService;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationService;
 import org.opentripplanner.framework.transaction.RepositoryRegistry;
 import org.opentripplanner.framework.transaction.api.RepositoryHandle;
@@ -151,6 +154,7 @@ class RequestScopedFactoryTest {
       .generalPatternService(
         new DefaultGeneralPatternService(new DefaultGeneralPatternRepository())
       )
+      .stopBearingService(new DefaultStopBearingService(new DefaultStopBearingRepository()))
       .fareServiceFactory(
         new FareServiceFactory() {
           @Override
@@ -292,6 +296,9 @@ class RequestScopedFactoryTest {
 
       @BindsInstance
       Builder generalPatternService(GeneralPatternService generalPatternService);
+
+      @BindsInstance
+      Builder stopBearingService(StopBearingService stopBearingService);
 
       @BindsInstance
       Builder fareServiceFactory(FareServiceFactory fareServiceFactory);

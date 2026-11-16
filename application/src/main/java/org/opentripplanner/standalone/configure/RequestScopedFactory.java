@@ -10,6 +10,7 @@ import org.opentripplanner.apis.transmodel.TransmodelRequestContext;
 import org.opentripplanner.ext.geocoder.LuceneIndex;
 import org.opentripplanner.ext.ojp.parameters.OjpApiParameters;
 import org.opentripplanner.ext.ojp.parameters.TriasApiParameters;
+import org.opentripplanner.ext.stopbearing.StopBearingService;
 import org.opentripplanner.framework.transaction.api.TransactionScope;
 import org.opentripplanner.routing.api.RoutingService;
 import org.opentripplanner.routing.api.request.RouteRequest;
@@ -62,6 +63,8 @@ public interface RequestScopedFactory {
   StreetDetailsService streetDetailsService();
 
   RegularTransferService transferService();
+
+  StopBearingService stopBearingService();
 
   VectorTileConfig vectorTileConfig();
 

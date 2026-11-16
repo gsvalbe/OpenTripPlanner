@@ -4,6 +4,7 @@ import graphql.schema.GraphQLSchema;
 import javax.annotation.Nullable;
 import org.opentripplanner.ext.generalpattern.GeneralPatternService;
 import org.opentripplanner.ext.geocoder.LuceneIndex;
+import org.opentripplanner.ext.stopbearing.StopBearingService;
 import org.opentripplanner.place.NearbyPlaceFinder;
 import org.opentripplanner.place.NearbyStopFinder;
 import org.opentripplanner.routing.api.RoutingService;
@@ -36,7 +37,11 @@ public record GtfsGraphQLRequestContext(
   /**
    * General patterns. Lookups return nothing when the general patterns feature is off.
    */
-  GeneralPatternService generalPatternService
+  GeneralPatternService generalPatternService,
+  /**
+   * Stop bearings. Lookups return nothing when the stop bearing feature is off.
+   */
+  StopBearingService stopBearingService
 ) {
   /**
    * Returns a clone of the default route request. The clone is necessary because one HTTP

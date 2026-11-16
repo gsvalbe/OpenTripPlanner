@@ -165,6 +165,7 @@ public class OTPMain {
         app.empiricalDelayRepository(),
         app.stopConsolidationRepository(),
         app.generalPatternRepository(),
+        app.stopBearingRepository(),
         app.fareServiceFactory()
       ).save(app.graphOutputDataSource());
     }

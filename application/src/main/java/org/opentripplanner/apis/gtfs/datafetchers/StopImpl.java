@@ -183,6 +183,18 @@ public class StopImpl implements GraphQLDataFetchers.GraphQLStop {
   }
 
   @Override
+  public DataFetcher<Integer> bearing() {
+    return environment -> {
+      FeedScopedId id = getValue(environment, StopLocation::getId, AbstractTransitEntity::getId);
+      return environment
+        .<GtfsGraphQLRequestContext>getContext()
+        .stopBearingService()
+        .findBearing(id)
+        .orElse(null);
+    };
+  }
+
+  @Override
   public DataFetcher<String> code() {
     return environment -> getValue(environment, StopLocation::getCode, Station::getCode);
   }

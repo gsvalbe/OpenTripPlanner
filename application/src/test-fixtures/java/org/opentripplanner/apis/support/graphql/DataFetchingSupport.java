@@ -14,6 +14,9 @@ import org.opentripplanner.apis.gtfs.GtfsGraphQLRequestContext;
 import org.opentripplanner.ext.generalpattern.GeneralPatternService;
 import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternRepository;
 import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternService;
+import org.opentripplanner.ext.stopbearing.StopBearingService;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingRepository;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingService;
 import org.opentripplanner.routing.fares.FareService;
 import org.opentripplanner.transit.service.DefaultTransitService;
 import org.opentripplanner.transit.service.TransitRepository;
@@ -69,6 +72,24 @@ public class DataFetchingSupport {
     FareService fareService,
     GeneralPatternService generalPatternService
   ) {
+    return dataFetchingEnvironment(
+      source,
+      arguments,
+      service,
+      fareService,
+      generalPatternService,
+      new DefaultStopBearingService(new DefaultStopBearingRepository())
+    );
+  }
+
+  public static DataFetchingEnvironment dataFetchingEnvironment(
+    Object source,
+    Map<String, Object> arguments,
+    TransitService service,
+    FareService fareService,
+    GeneralPatternService generalPatternService,
+    StopBearingService stopBearingService
+  ) {
     final var executionContext = executionContext();
     return DataFetchingEnvironmentImpl.newDataFetchingEnvironment(executionContext)
       .source(source)
@@ -88,7 +109,8 @@ public class DataFetchingSupport {
           null,
           null,
           null,
-          generalPatternService
+          generalPatternService,
+          stopBearingService
         )
       )
       .build();

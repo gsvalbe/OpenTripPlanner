@@ -20,6 +20,7 @@ import org.opentripplanner.datastore.api.DataSource;
 import org.opentripplanner.ext.emission.EmissionRepository;
 import org.opentripplanner.ext.empiricaldelay.EmpiricalDelayRepository;
 import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
+import org.opentripplanner.ext.stopbearing.StopBearingRepository;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationRepository;
 import org.opentripplanner.framework.application.OtpAppException;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueSummary;
@@ -92,6 +93,7 @@ public class SerializedGraphObject implements Serializable {
   public final DataImportIssueSummary issueSummary;
   public final StopConsolidationRepository stopConsolidationRepository;
   public final GeneralPatternRepository generalPatternRepository;
+  public final StopBearingRepository stopBearingRepository;
   private final int routingTripPatternCounter;
   public final @Nullable EmissionRepository emissionRepository;
   public final @Nullable EmpiricalDelayRepository empiricalDelayRepository;
@@ -115,6 +117,7 @@ public class SerializedGraphObject implements Serializable {
     @Nullable EmpiricalDelayRepository empiricalDelayRepository,
     StopConsolidationRepository stopConsolidationRepository,
     GeneralPatternRepository generalPatternRepository,
+    StopBearingRepository stopBearingRepository,
     FareServiceFactory fareServiceFactory
   ) {
     this.graph = graph;
@@ -135,6 +138,7 @@ public class SerializedGraphObject implements Serializable {
     this.routingTripPatternCounter = RoutingTripPattern.indexCounter();
     this.stopConsolidationRepository = stopConsolidationRepository;
     this.generalPatternRepository = generalPatternRepository;
+    this.stopBearingRepository = stopBearingRepository;
     this.fareServiceFactory = fareServiceFactory;
   }
 

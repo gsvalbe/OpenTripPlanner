@@ -168,6 +168,11 @@ public enum OTPFeature {
     true,
     "Include train Sørlandsbanen in results when searching in south of Norway. Only relevant in Norway."
   ),
+  StopBearing(
+    false,
+    true,
+    "Compute stop bearings: the direction in which vehicles leave each stop, used to rotate stop icons on a map."
+  ),
   TransferAnalyzer(false, true, "Analyze transfers during graph build."),
   TriasApi(false, true, "TRIAS API.");
 

@@ -19,6 +19,8 @@ import org.opentripplanner.apis.support.graphql.DataFetchingSupport;
 import org.opentripplanner.ext.fares.service.gtfs.v1.DefaultFareService;
 import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternRepository;
 import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternService;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingRepository;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingService;
 import org.opentripplanner.place.nearbystopfinder.StreetNearbyStopFinder;
 import org.opentripplanner.place.placefinder.StreetNearbyPlaceFinder;
 import org.opentripplanner.routing.api.request.RouteRequest;
@@ -96,7 +98,8 @@ class _RouteRequestTestContext {
       StreetNearbyStopFinder.of(linkingContextFactory).build(),
       routeRequest,
       null,
-      new DefaultGeneralPatternService(new DefaultGeneralPatternRepository())
+      new DefaultGeneralPatternService(new DefaultGeneralPatternRepository()),
+      new DefaultStopBearingService(new DefaultStopBearingRepository())
     );
   }
 

@@ -24,6 +24,7 @@ import org.opentripplanner.ext.ojp.parameters.OjpApiParameters;
 import org.opentripplanner.ext.ojp.parameters.TriasApiParameters;
 import org.opentripplanner.ext.ridehailing.RideHailingService;
 import org.opentripplanner.ext.sorlandsbanen.SorlandsbanenNorwayService;
+import org.opentripplanner.ext.stopbearing.StopBearingService;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationService;
 import org.opentripplanner.framework.transaction.RepositoryRegistry;
 import org.opentripplanner.framework.transaction.api.RepositoryHandle;
@@ -272,7 +273,8 @@ public class RequestScopedModule {
     LinkingContextFactory linkingContextFactory,
     RouteRequest defaultRouteRequest,
     @Nullable LuceneIndex luceneIndex,
-    GeneralPatternService generalPatternService
+    GeneralPatternService generalPatternService,
+    StopBearingService stopBearingService
   ) {
     var realtimeVehicleSnapshot = realtimeVehicleRepositoryHandle.repositorySnapshot(
       transactionScope
@@ -300,7 +302,8 @@ public class RequestScopedModule {
       nearbyStopFinder,
       defaultRouteRequest,
       luceneIndex,
-      generalPatternService
+      generalPatternService,
+      stopBearingService
     );
   }
 }

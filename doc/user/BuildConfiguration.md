@@ -106,6 +106,7 @@ Sections follow that describe particular settings in more depth.
 |    includeOsmStationEntrances                                                               |       `boolean`      | Whether to include station entrances from the OSM data.                                                                                                        | *Optional* | `false`                           |  2.10 |
 |    [osmTagMapping](#od_osmTagMapping)                                                       |        `enum`        | The named set of mapping rules applied when parsing OSM tags.                                                                                                  | *Optional* | `"default"`                       |  2.2  |
 |    timeZone                                                                                 |      `time-zone`     | The timezone used to resolve opening hours in OSM data.                                                                                                        | *Optional* |                                   |  2.2  |
+| [stopBearings](#stopBearings)                                                               |       `object`       | Configure how stop bearings are computed.                                                                                                                      | *Optional* |                                   |  2.9  |
 | [transferParametersForMode](#transferParametersForMode)                                     | `enum map of object` | Configures mode-specific properties for transfer calculations.                                                                                                 | *Optional* |                                   |  2.7  |
 |    BIKE                                                                                     |       `object`       | NA                                                                                                                                                             | *Optional* |                                   |  2.7  |
 |       [bikesAllowedStopMaxTransferDuration](#tpfm_BIKE_bikesAllowedStopMaxTransferDuration) |      `duration`      | This is used for specifying a `maxTransferDuration` value to use with transfers between stops which are visited by trips that allow bikes.                     | *Optional* |                                   |  2.9  |
@@ -1098,6 +1099,19 @@ The named set of mapping rules applied when parsing OSM tags. Overrides the valu
 **Enum values:** `default` | `baltics` | `norway` | `uk` | `finland` | `germany` | `hamburg` | `atlanta` | `houston` | `portland` | `twin-cities` | `constant-speed-finland`
 
 The named set of mapping rules applied when parsing OSM tags.
+
+<h3 id="stopBearings">stopBearings</h3>
+
+**Since version:** `2.9` ∙ **Type:** `object` ∙ **Cardinality:** `Optional`   
+**Path:** / 
+
+Configure how stop bearings are computed.
+
+The bearing of a stop is the direction in which vehicles leave it, taken from the shapes
+of the scheduled trip patterns. A station gets the combined bearing of its child stops.
+Terminals, and stops where vehicles leave in clearly different directions, get none.
+Bearings are computed only when the `StopBearing` feature is enabled.
+
 
 <h3 id="transferParametersForMode">transferParametersForMode</h3>
 

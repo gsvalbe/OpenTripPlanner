@@ -11,6 +11,7 @@ import org.opentripplanner.core.framework.deduplicator.DeduplicatorService;
 import org.opentripplanner.ext.emission.EmissionRepository;
 import org.opentripplanner.ext.empiricaldelay.EmpiricalDelayRepository;
 import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
+import org.opentripplanner.ext.stopbearing.StopBearingRepository;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationRepository;
 import org.opentripplanner.framework.application.OTPFeature;
 import org.opentripplanner.framework.application.OtpAppException;
@@ -89,6 +90,7 @@ public class GraphBuilder implements Runnable {
     @Nullable EmpiricalDelayRepository empiricalDelayRepository,
     @Nullable StopConsolidationRepository stopConsolidationRepository,
     GeneralPatternRepository generalPatternRepository,
+    StopBearingRepository stopBearingRepository,
     boolean loadStreetGraph,
     boolean saveStreetGraph
   ) {
@@ -109,6 +111,7 @@ public class GraphBuilder implements Runnable {
       .emissionRepository(emissionRepository)
       .empiricalDelayRepository(empiricalDelayRepository)
       .generalPatternRepository(generalPatternRepository)
+      .stopBearingRepository(stopBearingRepository)
       .fareServiceFactory(fareServiceFactory)
       .dataSources(dataSources)
       .timeZoneId(transitRepository.getTimeZone());
@@ -140,6 +143,7 @@ public class GraphBuilder implements Runnable {
         factory.generalPatternGraphBuilder(),
         OTPFeature.GeneralPatterns
       );
+      graphBuilder.addModuleOptional(factory.stopBearingGraphBuilder(), OTPFeature.StopBearing);
       graphBuilder.addModuleOptional(
         factory.timeZoneAdjusterModule(),
         transitRepository.getAgencyTimeZones().size() > 1

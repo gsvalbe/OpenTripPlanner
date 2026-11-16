@@ -51,6 +51,8 @@ import org.opentripplanner.core.model.id.FeedScopedIdForTestFactory;
 import org.opentripplanner.core.model.time.TimePeriod;
 import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternRepository;
 import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternService;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingRepository;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingService;
 import org.opentripplanner.model.FeedInfoTestFactory;
 import org.opentripplanner.model.StopTime;
 import org.opentripplanner.model.calendar.CalendarServiceData;
@@ -575,7 +577,8 @@ class GraphQLIntegrationTest {
       null,
       routeRequest,
       null,
-      new DefaultGeneralPatternService(new DefaultGeneralPatternRepository())
+      new DefaultGeneralPatternService(new DefaultGeneralPatternRepository()),
+      new DefaultStopBearingService(new DefaultStopBearingRepository())
     );
   }
 

@@ -14,6 +14,8 @@ import org.opentripplanner.ext.empiricaldelay.configure.EmpiricalDelayRepository
 import org.opentripplanner.ext.fares.configure.FareModule;
 import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
 import org.opentripplanner.ext.generalpattern.configure.GeneralPatternRepositoryModule;
+import org.opentripplanner.ext.stopbearing.StopBearingRepository;
+import org.opentripplanner.ext.stopbearing.configure.StopBearingRepositoryModule;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationRepository;
 import org.opentripplanner.ext.stopconsolidation.configure.StopConsolidationRepositoryModule;
 import org.opentripplanner.graph_builder.GraphBuilderDataSources;
@@ -54,6 +56,7 @@ import org.opentripplanner.transit.service.TransitRepository;
     EmpiricalDelayRepositoryModule.class,
     StopConsolidationRepositoryModule.class,
     GeneralPatternRepositoryModule.class,
+    StopBearingRepositoryModule.class,
     StreetRepositoryModule.class,
     TransferRepositoryModule.class,
     VehicleParkingRepositoryModule.class,
@@ -99,6 +102,9 @@ public interface LoadApplicationFactory {
 
   @Singleton
   GeneralPatternRepository emptyGeneralPatternRepository();
+
+  @Singleton
+  StopBearingRepository emptyStopBearingRepository();
 
   @Singleton
   StreetRepository emptyStreetRepository();

@@ -1011,6 +1011,7 @@ public class GraphQLDataFetchers {
   public interface GraphQLStop {
     DataFetcher<Iterable<TransitAlert>> alerts();
     DataFetcher<Iterable<GraphQLStopAttribute>> attributes();
+    DataFetcher<Integer> bearing();
     DataFetcher<Iterable<StopCallOnTripOnServiceDate>> canceledCalls();
     DataFetcher<Object> cluster();
     DataFetcher<String> code();

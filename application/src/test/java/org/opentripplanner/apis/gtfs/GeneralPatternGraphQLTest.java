@@ -14,6 +14,8 @@ import org.opentripplanner.ext.generalpattern.internal.DefaultGeneralPatternServ
 import org.opentripplanner.ext.generalpattern.model.GeneralPattern;
 import org.opentripplanner.ext.generalpattern.model.GeneralPatternPlace;
 import org.opentripplanner.ext.generalpattern.model.GeneralPatternVariant;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingRepository;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingService;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.network.Route;
@@ -137,7 +139,8 @@ class GeneralPatternGraphQLTest {
       null,
       routeRequest,
       null,
-      new DefaultGeneralPatternService(repository)
+      new DefaultGeneralPatternService(repository),
+      new DefaultStopBearingService(new DefaultStopBearingRepository())
     );
     return GtfsGraphQLIndex.getGraphQLExecutionResult(
       query,

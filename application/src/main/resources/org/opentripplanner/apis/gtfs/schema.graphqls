@@ -2728,6 +2728,15 @@ type Stop implements Node & PlaceInterface {
   "Attributes of the stop"
   attributes: [StopAttribute!]!
   """
+  The direction in which vehicles leave this stop, in whole degrees clockwise from north (0-359),
+  computed from the shapes of the scheduled trips. Useful for rotating stop icons on a map. For a
+  station, the combined direction of its child stops.
+
+  Null when no scheduled trip departs from the stop (a terminal), when departing trips go in
+  clearly different directions, or when the `StopBearing` feature is off.
+  """
+  bearing: Int
+  """
   Canceled stop calls (arrivals/departures) at this stop. A call is included if either the trip it
   belongs to has been canceled, or the visit at this stop has been canceled (skipped).
     

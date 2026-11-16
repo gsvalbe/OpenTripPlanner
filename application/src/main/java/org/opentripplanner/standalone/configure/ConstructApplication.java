@@ -9,6 +9,7 @@ import org.opentripplanner.ext.carpooling.routing.CarpoolTripVertexResolver;
 import org.opentripplanner.ext.emission.EmissionRepository;
 import org.opentripplanner.ext.empiricaldelay.EmpiricalDelayRepository;
 import org.opentripplanner.ext.generalpattern.GeneralPatternRepository;
+import org.opentripplanner.ext.stopbearing.StopBearingRepository;
 import org.opentripplanner.ext.stopconsolidation.StopConsolidationRepository;
 import org.opentripplanner.framework.application.LogMDCSupport;
 import org.opentripplanner.framework.application.OTPFeature;
@@ -97,6 +98,7 @@ public class ConstructApplication {
     VehicleParkingRepository vehicleParkingRepository,
     @Nullable StopConsolidationRepository stopConsolidationRepository,
     GeneralPatternRepository generalPatternRepository,
+    StopBearingRepository stopBearingRepository,
     StreetRepository streetRepository,
     FareServiceFactory fareServiceFactory
   ) {
@@ -136,6 +138,7 @@ public class ConstructApplication {
       .dataImportIssueSummary(issueSummary)
       .stopConsolidationRepository(stopConsolidationRepository)
       .generalPatternRepository(generalPatternRepository)
+      .stopBearingRepository(stopBearingRepository)
       .streetStreetRepository(streetRepository)
       .schema(config.routerConfig().routingRequestDefaults())
       .fareServiceFactory(fareServiceFactory)
@@ -181,6 +184,7 @@ public class ConstructApplication {
       factory.empiricalDelayRepository(),
       factory.stopConsolidationRepository(),
       factory.generalPatternRepository(),
+      factory.stopBearingRepository(),
       cli.doLoadStreetGraph(),
       cli.doSaveStreetGraph()
     );
@@ -311,6 +315,10 @@ public class ConstructApplication {
 
   public GeneralPatternRepository generalPatternRepository() {
     return factory.generalPatternRepository();
+  }
+
+  public StopBearingRepository stopBearingRepository() {
+    return factory.stopBearingRepository();
   }
 
   public StreetRepository streetRepository() {

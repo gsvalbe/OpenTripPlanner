@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.glassfish.grizzly.http.server.Request;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingRepository;
+import org.opentripplanner.ext.stopbearing.internal.DefaultStopBearingService;
 import org.opentripplanner.routing.impl.TransitAlertServiceImpl;
 import org.opentripplanner.standalone.api.TestServerContext;
 import org.opentripplanner.standalone.config.RouterConfig;
@@ -29,6 +31,7 @@ class VectorTilesResourceTest {
       TestServerContext.createVehicleRentalService(),
       TestServerContext.createVehicleParkingService(),
       new TransitAlertServiceImpl(),
+      new DefaultStopBearingService(new DefaultStopBearingRepository()),
       grizzlyRequest,
       "default"
     );

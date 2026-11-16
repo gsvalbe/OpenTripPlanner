@@ -32,6 +32,8 @@ import org.opentripplanner.ext.empiricaldelay.parameters.EmpiricalDelayParameter
 import org.opentripplanner.ext.fares.FaresConfiguration;
 import org.opentripplanner.ext.generalpattern.config.GeneralPatternConfig;
 import org.opentripplanner.ext.generalpattern.parameters.GeneralPatternParameters;
+import org.opentripplanner.ext.stopbearing.config.StopBearingConfig;
+import org.opentripplanner.ext.stopbearing.parameters.StopBearingParameters;
 import org.opentripplanner.graph_builder.module.cache.GraphBuildCacheParameters;
 import org.opentripplanner.graph_builder.module.ned.parameter.DemExtractParameters;
 import org.opentripplanner.graph_builder.module.ned.parameter.DemExtractParametersList;
@@ -179,6 +181,7 @@ public class BuildConfig implements OtpDataStoreConfig {
   public final EmissionParameters emission;
   public final EmpiricalDelayParameters empiricalDelay;
   public final GeneralPatternParameters generalPatterns;
+  public final StopBearingParameters stopBearings;
   public final TransitFeeds transitFeeds;
   public final boolean staticParkAndRide;
   public final boolean staticBikeParkAndRide;
@@ -624,6 +627,7 @@ public class BuildConfig implements OtpDataStoreConfig {
     this.emission = EmissionConfig.mapEmissionsConfig("emission", root);
     this.empiricalDelay = EmpiricalDelayConfig.mapEmpiricalDelayConfig("empiricalDelay", root);
     this.generalPatterns = GeneralPatternConfig.mapGeneralPatternConfig("generalPatterns", root);
+    this.stopBearings = StopBearingConfig.mapStopBearingConfig("stopBearings", root);
     this.netexDefaults = NetexConfig.mapNetexDefaultParameters(root, "netexDefaults");
     this.gtfsDefaults = GtfsConfig.mapGtfsDefaultParameters(root, "gtfsDefaults");
     this.transitFeeds = TransitFeedConfig.mapTransitFeeds(
