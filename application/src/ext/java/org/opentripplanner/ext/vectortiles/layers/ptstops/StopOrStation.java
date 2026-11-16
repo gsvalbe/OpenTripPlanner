@@ -4,15 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Point;
 import org.opentripplanner.core.model.i18n.I18NString;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.framework.json.ObjectMappers;
 import org.opentripplanner.street.geometry.GeometryUtils;
+import org.opentripplanner.transit.model.basic.TransitModePriority;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.site.Station;
@@ -84,15 +82,12 @@ public class StopOrStation {
   }
 
   public String getMode(TransitService transitService) {
-    return stopLocations
-      .stream()
-      .flatMap(stop -> transitService.findPatterns(stop).stream())
-      .map(TripPattern::getMode)
-      .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
-      .entrySet()
-      .stream()
-      .max(Map.Entry.comparingByValue())
-      .map(Map.Entry::getKey)
+    return TransitModePriority.highest(
+      stopLocations
+        .stream()
+        .flatMap(stop -> transitService.findPatterns(stop).stream())
+        .map(TripPattern::getMode)
+    )
       .map(Enum::name)
       .orElse(null);
   }

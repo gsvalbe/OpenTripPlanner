@@ -7,13 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.opentripplanner.apis.support.mapping.PropertyMapper;
 import org.opentripplanner.core.model.i18n.I18NStringMapper;
 import org.opentripplanner.framework.json.ObjectMappers;
 import org.opentripplanner.inspector.vector.KeyValue;
+import org.opentripplanner.transit.model.basic.TransitModePriority;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.service.TransitService;
@@ -78,14 +76,7 @@ public class DigitransitStopPropertyMapper extends PropertyMapper<RegularStop> {
   protected static String getType(TransitService transitService, RegularStop stop) {
     Collection<TripPattern> patternsForStop = transitService.findPatterns(stop);
 
-    return patternsForStop
-      .stream()
-      .map(TripPattern::getMode)
-      .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
-      .entrySet()
-      .stream()
-      .max(Map.Entry.comparingByValue())
-      .map(Map.Entry::getKey)
+    return TransitModePriority.highest(patternsForStop.stream().map(TripPattern::getMode))
       .map(Enum::name)
       .orElse(null);
   }

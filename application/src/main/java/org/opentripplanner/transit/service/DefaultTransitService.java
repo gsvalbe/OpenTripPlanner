@@ -17,8 +17,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.locationtech.jts.geom.Envelope;
@@ -40,6 +38,7 @@ import org.opentripplanner.transit.api.request.TripRequest;
 import org.opentripplanner.transit.api.request.TripTimeOnDateRequest;
 import org.opentripplanner.transit.model.basic.Notice;
 import org.opentripplanner.transit.model.basic.TransitMode;
+import org.opentripplanner.transit.model.basic.TransitModePriority;
 import org.opentripplanner.transit.model.calendar.TripCalendars;
 import org.opentripplanner.transit.model.filter.expr.Matcher;
 import org.opentripplanner.transit.model.filter.transit.RegularStopMatcherFactory;
@@ -756,14 +755,14 @@ public class DefaultTransitService implements TransitService {
 
   @Override
   public List<TransitMode> findTransitModes(StopLocationsGroup station) {
-    return sortByOccurrenceAndReduce(
+    return TransitModePriority.sortDistinct(
       station.getChildStops().stream().flatMap(this::getPatternModesOfStop)
-    ).toList();
+    );
   }
 
   @Override
   public List<TransitMode> findTransitModes(StopLocation stop) {
-    return sortByOccurrenceAndReduce(getPatternModesOfStop(stop)).toList();
+    return TransitModePriority.sortDistinct(getPatternModesOfStop(stop));
   }
 
   @Override
@@ -804,21 +803,6 @@ public class DefaultTransitService implements TransitService {
   @Override
   public ReplacementHelper getReplacementHelper() {
     return replacementHelper;
-  }
-
-  /**
-   * Take a stream of T, count the occurrences of each value and return it in order of frequency
-   * from high to low.
-   * <p>
-   * Example: [a,b,b,c,c,c] will return [c,b,a]
-   */
-  private static <T> Stream<T> sortByOccurrenceAndReduce(Stream<T> input) {
-    return input
-      .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
-      .entrySet()
-      .stream()
-      .sorted(Map.Entry.<T, Long>comparingByValue().reversed())
-      .map(Map.Entry::getKey);
   }
 
   /**

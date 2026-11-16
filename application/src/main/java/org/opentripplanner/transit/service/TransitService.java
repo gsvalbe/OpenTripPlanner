@@ -28,6 +28,7 @@ import org.opentripplanner.transit.api.request.TripRequest;
 import org.opentripplanner.transit.api.request.TripTimeOnDateRequest;
 import org.opentripplanner.transit.model.basic.Notice;
 import org.opentripplanner.transit.model.basic.TransitMode;
+import org.opentripplanner.transit.model.basic.TransitModePriority;
 import org.opentripplanner.transit.model.calendar.TripCalendars;
 import org.opentripplanner.transit.model.framework.AbstractTransitEntity;
 import org.opentripplanner.transit.model.network.GroupOfRoutes;
@@ -393,8 +394,8 @@ public interface TransitService {
    * The mode is either taken from {@link StopLocation#getVehicleType()} (if non-null)
    * or from the list of patterns that use the stop location.
    * <p>
-   * The returning stream is ordered by the number of occurrences of the mode in the child stops.
-   * So, if more patterns of mode BUS than RAIL visit the group, the result will be [BUS,RAIL].
+   * The returned list is ordered by mode priority (see {@link TransitModePriority}), not by number
+   * of patterns. So, if BUS and RAIL patterns visit the group, the result will be [RAIL,BUS].
    */
   List<TransitMode> findTransitModes(StopLocationsGroup station);
 
@@ -404,10 +405,8 @@ public interface TransitService {
    * The mode is either taken from {@link StopLocation#getVehicleType()} (if non-null)
    * or from the list of patterns that use the stop location.
    * <p>
-   * If {@link StopLocation#getVehicleType()} is null the returning stream is ordered by the number
-   * of occurrences of the mode in the stop.
-   * <p>
-   * So, if more patterns of mode BUS than RAIL visit the stop, the result will be [BUS,RAIL].
+   * The returned list is ordered by mode priority (see {@link TransitModePriority}), not by number
+   * of patterns. So, if BUS and RAIL patterns visit the stop, the result will be [RAIL,BUS].
    */
   List<TransitMode> findTransitModes(StopLocation stop);
 

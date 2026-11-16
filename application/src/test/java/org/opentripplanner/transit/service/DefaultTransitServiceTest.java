@@ -232,7 +232,7 @@ class DefaultTransitServiceTest {
       @Override
       public Collection<TripPattern> findPatterns(StopLocation stop) {
         if (stop.equals(STOP_B)) {
-          return List.of(FERRY_PATTERN, FERRY_PATTERN, RAIL_PATTERN, RAIL_PATTERN, RAIL_PATTERN);
+          return List.of(FERRY_PATTERN, FERRY_PATTERN, FERRY_PATTERN, RAIL_PATTERN);
         } else {
           return List.of(BUS_PATTERN);
         }
